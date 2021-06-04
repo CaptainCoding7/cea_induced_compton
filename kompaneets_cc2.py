@@ -46,28 +46,11 @@ def synch(M,x):
     return x*0
 
 
-def init_sol(x,N):
+def init_cond(nbPhotons):
     
-    temperature=70
-    xinj=0.1
-
-    # initialization of the solution vector
-    u=np.empty([N,M])
-    #print(x)
+    xinj = np.sqrt(nbPhotons)
+    print(xinj)
     
-    # we search the index of the x array with the closest value from xinj
-    # calculate the difference array
-    difference_array = np.absolute(x-xinj)
-    # find the index of minimum element from the array
-    index = difference_array.argmin()
-    print(x[index], index)
-    
-    u[0] = temperature*unit_impulse(M, index)
-    #u[0] = lognorm.pdf(x , loc = temperature , s = 0.01 )
-    
-    return u
-
-def init_cond(xinj):
     # on identifie le bin correspondant a xinj
     iinj = np.argwhere(xb<xinj)[-1]
     # on recentre xinj sur le bin en question
@@ -76,9 +59,11 @@ def init_cond(xinj):
     # ou on met 1/dx de maniere avec avoir une integrale=1
     u0 = np.zeros_like(xa)
     u0[iinj] = 1.0/dxa[iinj]
+
+       
+    u0[iinj] = nbPhotons / ((xinj**2) * dxa[iinj])
     print(u0[iinj])
     print("dxa[inj]=",dxa[iinj])
-       
     
     return u0
 
@@ -243,10 +228,15 @@ dxb = xa[1:] - xa[:-1]
 
 
 # initialization of the solution vector
+
 #u=np.empty([N,M])
-# xinj EST STABLE EN DECA DE 1.513 (inclus)
-xinj=0.1
-u0=init_cond(xinj)
+# STABLE EN DECA DE 1.513 (inclus)
+#xinj=0.1
+
+# Cette fois, on impose le nombre de photons
+# STABLE EN DECA DE ~2.4
+nbPhotons = 1
+u0 = init_cond(nbPhotons)
 
 # Calculus of the initial density
 # simple integration
