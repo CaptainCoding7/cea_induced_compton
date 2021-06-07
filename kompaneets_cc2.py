@@ -45,11 +45,21 @@ def synch(M,x):
 
     return x*0
 
+def init_gaussian(xinj):
 
-def init_cond(nbPhotons):
+    # on identifie le bin correspondant a xinj
+    iinj = np.argwhere(xb<xinj)[-1]
+    # on recentre xinj sur le bin en question
+    xinj = xa[iinj]
+
+    u0 = norm.pdf(xa , loc = xinj , scale = 0.03 )
+
+    return u0
+
+
+def init_dirac(xinj):
     
-    xinj = np.sqrt(nbPhotons)
-    print(xinj)
+    #xinj = np.sqrt(nbPhotons)
     
     # on identifie le bin correspondant a xinj
     iinj = np.argwhere(xb<xinj)[-1]
@@ -57,23 +67,20 @@ def init_cond(nbPhotons):
     xinj = xa[iinj]
     # on initialise avec des zeros partout sauf dans le bin en question
     # ou on met 1/dx de maniere avec avoir une integrale=1
-    u0 = np.zeros_like(xa)
-    u0[iinj] = 1.0/dxa[iinj]
+    #u0 = np.zeros_like(xa)
+    #u0[iinj] = 1.0/dxa[iinj]
 
-       
-    u0[iinj] = nbPhotons / ((xinj**2) * dxa[iinj])
-    print(u0[iinj])
-    print("dxa[inj]=",dxa[iinj])
+    nbPhotons = xinj**2
+
+    uinj = nbPhotons / ((xinj**2) * dxa[iinj])
     
+    u0 = uinj * unit_impulse(len(xa), int(iinj))
+
     return u0
 
 
-def setFigureParameters(u):
+def setFigureParameters(u,ylabel):
     
-    # Caluculus of the final density (after 30s)
-    # Must be constant (same as the initial one)
-    Ndens = np.sum(u*xa*xa*dxa)
-    print("Densité finale: ",Ndens)
     
     # Reglages affichage
     plt.xscale('log')
@@ -81,26 +88,27 @@ def setFigureParameters(u):
     leg = plt.legend(loc="upper right",prop={'size': 8}, bbox_to_anchor=[1, 1],
                      ncol=1, shadow=True, title="Legend", fancybox=True)
     leg.get_title().set_color("black")
-    plt.ylim(1.e-8,1.e2)
+    plt.ylim(1.e-6,1.e2)
     plt.xlim(1.e-4,1.e4)
     plt.xlabel('x')
-    plt.ylabel('u(x,t)')
+    plt.ylabel(ylabel)
     plt.show()
     
 
 # solve the equation with the chang-cooper scheme
-def changCooper(u0, N,pech,Q):
+def changCooper(u0, N, pech, Q, dT):
     
     global B
     
     u=u0
+    
+    print(dT)
 
     # simulation for different instants
     for n in range(N):
         
        #we redefine B as it depends on u    
         B = 0.5*(xa[1:]**4+xa[:-1]**4) * (u[1:]+1) # sur les bords      (M-1)
-        
         w = (B/C)*dxb
         lwl = np.abs(w)
         W = lwl * np.exp(-lwl)/(1.0-np.exp(-lwl))
@@ -116,33 +124,26 @@ def changCooper(u0, N,pech,Q):
     
         # doagonale (taille M)
         b = np.zeros_like(xa)
-        b[0]    = 1/dt + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] ) + pech[0]
-        b[1:-1] = 1/dt + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] ) + pech[1:-1]
-        b[-1]   = 1/dt + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 ) + pech[-1]
+        b[0]    = 1/dT + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] ) + pech[0]
+        b[1:-1] = 1/dT + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] ) + pech[1:-1]
+        b[-1]   = 1/dT + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 ) + pech[-1]
         
-        r = Q + u/dt
+        r = Q + u/dT
         
         u = tms.tridag(-a,b,-c,r)
             
     return u
 
-
+    
 def solveKompaneets_ech_compare():
         
     plt.plot(xa,u0,color='purple',label='t=0s')
-    
-    # plotting for 3 instants
-    t = [0.3,3.,30.]
-    col=['r','g','b']
-    norm = [1,1,1]
-    for i,tt in enumerate(t):
+
+    for i,tt in enumerate(tobs):
         n = int(tt/dt)
         u = changCooper(u0,n,np.zeros_like(xa),np.zeros_like(xa))
         uech = changCooper(u0,n,pech,np.full_like(xa, 0))
         
-        #print(u)
-        #logplot(dt, xa, norm[i]*u, n)
-        #logplot(dt,xa, norm[i]*uth(xa,n*dt, 0.1),tt )
         strlabel1='t={:.2f}s '.format(tt),'avec echappt' 
         strlabel2='t={:.2f}s '.format(tt),'sans echappt' 
         
@@ -155,18 +156,11 @@ def solveKompaneets_inj_compare():
         
     plt.plot(xa,u0,color='purple',label='t=0s')
     
-    # plotting for 3 instants
-    t = [0.3,3.,30.]
-    col=['r','g','b']
-    norm = [1,1,1]
-    for i,tt in enumerate(t):
+    for i,tt in enumerate(tobs):
         n = int(tt/dt)
         u = changCooper(u0,n,np.zeros_like(xa),np.zeros_like(xa))
         uinj = changCooper(u0,n,np.zeros_like(xa),Q)
-        
-        #print(u)
-        #logplot(dt, xa, norm[i]*u, n)
-        #logplot(dt,xa, norm[i]*uth(xa,n*dt, 0.1),tt )
+
         strlabel1='t={:.2f}s '.format(tt),'avec injection' 
         strlabel2='t={:.2f}s '.format(tt),'sans injection' 
         
@@ -178,41 +172,60 @@ def solveKompaneets_inj_compare():
 
 def solveKompaneets():
         
-    plt.plot(xa,u0,color='purple',label='t=0s')
+    #plt.plot(xa,u0,color='purple',label='t=0s')
     
-    # plotting for 3 instants
-    t = [0.3,3.,30.]
-    col=['r','g','b']
-    norm = [1,1,1]
-    for i,tt in enumerate(t):
-        n = int(tt/dt)
-        u = changCooper(u0,n,pech,Q)
-        
-        #print(u)
-        #logplot(dt, xa, norm[i]*u, n)
-        #logplot(dt,xa, norm[i]*uth(xa,n*dt, 0.1),tt )
-        strlabel1='t={:.2f}s '.format(tt),'avec injection' 
-        strlabel2='t={:.2f}s '.format(tt),'sans injection' 
-        
-        plt.plot(xa,norm[i]*u,color=col[i],label='t={:.2f}s '.format(tt))
+    phoDens0 = u0*xa**2
+    plt.plot(xa,phoDens0,color='purple',label='t=0s')
     
-    setFigureParameters(u)
+    
+    for i,tt in enumerate(tobs):
+        dto = ((k*Te) / (me*cl**2)) * Ne * cl * sT * dt
+        n = int(tt/dto)
+        u = changCooper(u0,n,pech,Q,dto)
+        # Caluculus of the final density (after 30s)
+        # Must be constant (same as the initial one)
+        Ndens = np.sum(u*xa*xa*dxa)
+        print("Densité finale: ",Ndens)
 
+        # plot the occupation rate
+        #plt.plot(xa,norm[i]*u,color=col[i],label='t={:.2f}s '.format(tt))
     
+        # plot the photon density rate
+        phoDens = u*xa**2
+        plt.plot(xa,norm[i]*phoDens,color=col[i],label='t={:.2f}s '.format(tt))
+    
+    #setFigureParameters(u,'u(x,t)')
+    setFigureParameters(u,'Photon Number Density')
 
 ####################################################
 ## Mesh generation
 
 # time
 #Nmax=30.01
-t = [0.3,3.,30.]
-dt=0.01
+# observation instants
+tobs = [0.2,2.,20.]
+dt=5e-3
+
+
 #N=int(Nmax/dt)
 
-# energy
-M=100
+# "energy"
+M=1000
 xmin = 1.e-3
 xmax = 1.e3
+
+# Boltzman constant
+k = 1.381e-23
+# Temperature of the electron field (K)
+# 1keV ~ k1.1e7 
+Te = 1.1e7
+cl= 3e8
+# Thompson scattering cross section
+sT = 6.652e-29
+# Electron number density
+Ne=6e22
+# Electron mass
+me=9.109e-31
 
 #x=np.logspace(-3, 3, M, endpoint=True)
 
@@ -231,12 +244,13 @@ dxb = xa[1:] - xa[:-1]
 
 #u=np.empty([N,M])
 # STABLE EN DECA DE 1.513 (inclus)
-#xinj=0.1
+xinj=0.5
 
 # Cette fois, on impose le nombre de photons
 # STABLE EN DECA DE ~2.4
-nbPhotons = 1
-u0 = init_cond(nbPhotons)
+#nbPhotons = 1
+
+u0 = init_gaussian(xinj)
 
 # Calculus of the initial density
 # simple integration
@@ -260,6 +274,8 @@ ro2=0
 pech = np.full_like(xa, ro2)            # au milieu          (M)
 symb2=""
 
+col=['r','g','b']
+norm = [1,1,1]
 fig = plt.figure()
 
 # test comparison sink/no sink
