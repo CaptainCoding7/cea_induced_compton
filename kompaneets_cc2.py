@@ -71,6 +71,26 @@ def init_dirac(xinj):
 
     return u0
 
+def init_planckian(Tp):
+      
+    """
+    # we have to set the limits of the planckian distribution we will define
+    e_pho_min = 1e-2
+    e_pho_max =2.5e1
+
+    Enorm = k * Tp / 1.602e-16
+    
+    xmin = e_pho_min / Enorm
+    xmax = e_pho_max / Enorm
+    
+    x_pho = np.linspace(xmin,xmax,M)    
+    """
+    
+    u0 = (1 /  (np.exp((h*f_photons)/(k*Tp)) - 1 ))
+    #u0 = (1 /  (np.exp(x_pho) - 1 ))
+
+    return u0
+
 
 def setFigureParameters(ylabel, xlabel, ymin, ymax,  xmin, xmax):
     
@@ -86,6 +106,49 @@ def setFigureParameters(ylabel, xlabel, ymin, ymax,  xmin, xmax):
     plt.ylabel(ylabel)
     plt.show()
     
+def noLogsetFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
+    
+    # Reglages affichage
+    #plt.xscale('log')
+    leg = plt.legend(loc="upper right",prop={'size': 7}, bbox_to_anchor=[1, 1],
+                     ncol=1, shadow=True, title="Legend", fancybox=True)
+    leg.get_title().set_color("black")
+    plt.ylim(ymin,ymax)
+    plt.xlim(xmin,xmax)
+     #   plt.xticks([1, 2, 3, 4, 5])
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.show()
+
+
+
+def deriv(x):
+    
+    u = x**3
+    ud = 3*x**2
+    v  = np.exp(h*x/(h*Te)) - 1
+    vd = np.exp(h*x/(h*Te))
+    
+    der = ((2*h)/cl**2) * (ud*v - u*vd) / v**2
+    print(der)
+    return der
+    
+    
+def findMin():
+    
+    
+    alpha = 0.02
+    delta=1e-2
+    xprev=0
+    x=1
+    
+    while abs(x-xprev) > delta:
+        xprev=x
+        x=x-alpha*deriv(x)
+        print("new x")
+        
+    print("------ xmax = ",x)
 
 # solve the equation with the chang-cooper scheme
 def changCooper(pech, Q, dT):
@@ -127,6 +190,8 @@ def changCooper(pech, Q, dT):
 
 
 def plotOccupationRate():
+    
+    print("Plotting occupation rate...")
         
     # plot the occupation rate
     for i,tt in enumerate(tobs):
@@ -138,6 +203,8 @@ def plotOccupationRate():
     
     
 def plotDensityFreq():
+    
+    print("Plotting spectral density...")
                   
     phoDensTh = ((8*np.pi)/cl**3) * f_photons**2 / (findCst()*np.exp((h*f_photons)/(k*Te)) - 1 ) 
     plt.plot(f_photons, phoDensTh, "+",color='red',label='theoritical solution')
@@ -163,6 +230,8 @@ def plotDensityFreq():
     
     
 def plotDensity():
+    
+    print("Plotting density...")
                  
     phoDensTh = ((8*np.pi)/cl**3) * f_photons**2 * (1 / (findCst()*np.exp((h*f_photons)/(k*Te)) - 1 )) *1.602e-16 / h 
     plt.plot(e_photons, phoDensTh, "+",color='red',label='theoritical solution')
@@ -196,8 +265,11 @@ def plotDensity():
 
 def plotIntensity():
     
-    intensityTh = ((2*h)/cl**2)  * ( (1 /  (findCst()*np.exp((h*f_photons)/(k*Te)) - 1 )) * f_photons**3)
-    plt.plot(e_photons, intensityTh, "+", color='red',label='theoritical solution')
+    print("Plotting intensity...")
+    
+    #C=findCst()
+    #intensityTh = ((2*h)/cl**2) * f_photons**3 * ( (1 /  (C*np.exp((h*f_photons)/(k*Te)) - 1 ))) 
+    #plt.plot(e_photons, intensityTh, "+", color='red',label='theoritical solution')
     
     # Calculus of the final density (after 30s)
     # Must be constant (same as the initial one)
@@ -211,16 +283,20 @@ def plotIntensity():
             index=0
         print(index)
 
-        # plot the photon density rate
+        # plot the intensity of the photon field
         intensity = ((2*h)/cl**2) * (u[index]*f_photons**3)
-
+        
         # multiply by Enorm as we represent the energy in abscisse
         plt.plot(e_photons, intensity, color = col[i],label='t={:.1E}s'.format(tt))
     
-    setFigureParameters('Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',1e-2,1e4,1e-1,1e3)
+    title='Tp={:.1E} keV ==> Densité de photons associée: {:.1E} m^-3'.format(Tp, Ndens0)
+    noLogsetFigureParameters(title, 'Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',0,3e3,1e-2,2.5e1)
+    #setFigureParameters('Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',1e-1,5e7,1e-4,1e3)
 
 
 def plotEnergyDensity():
+    
+    print("Plotting Energy density... ")
     
     t = np.linspace(dt, tmax/5, 25, endpoint=True)
     Er = np.zeros(25)
@@ -253,8 +329,6 @@ def F(c):
     """
     the equation used to find the constant
     """
-    Ndens0 = 8*np.pi * ((k*Te)/(cl*h))**3 * np.sum(u[0]*dxa*xa**2)
-    print("Densité initiale: ",Ndens0)
     eq = quad(BEDistrib, 0, 100, args=(c,)) - ((cl*h)**3*Ndens0) / (8*np.pi*(k*Te)**3)
     return eq[0]
 
@@ -281,63 +355,61 @@ def defineConstants():
     h = 6.626e-34
     # Temperature of the electron field (K)
     # 1keV ~ k*1.1e7 
-    Te = 1e8
+    Te = 1e7
     cl= 3e8
     # Thompson scattering cross section
     sT = 6.652e-29
-    # Electron number density
-    Ne=6e28
+    # Electron number density (in m^-3)
+    Ne=2e22
     # Electron mass
     me=9.109e-31
     
 
 def meshGeneration():
     
-    global xb,xa,dxa,dxb,tobs,tmax,dt,dto,N,M,u,Enorm, f_photons, e_photons
+    global xb,xa,dxa,dxb,tobs,tmax,dt,dto,N,M,Enorm, f_photons, e_photons
 
     #########################  MESH GENERATION  #######################
     
-    #### time mesh######################################################
+    #### time mesh  ################################
     
     nu = ((k*Te) / (me*cl**2)) * Ne * cl * sT
     
     # observation instants
-    # the last instant is takenn as the max time in the simulation
+    # the last instant is taken as the max time in the simulation
     #tobs = 5e-9 * np.arange(12)
     #tobs = np.arange(0,26e-8,5e-8)
-    tobs = [0, 5e-6]
+    tobs = [0, 1e-7, 3e-7, 4e-7]
+    tobs = [0, 2e-1]
     tmax= tobs[len(tobs)-1]
     
-    dt=5e-9
+    dt=1e-3
     dto =  nu * dt
     print("dt;dto: ",dt,dto)
     N=int(tmax/dt)
     
-    #### energy mesh  ####################################################
+    #### "energy" mesh  ################################
     
-    M=1000
+    M=100
     
     # the energy carried by the photons (keV)
-    emin = 1.e-3
-    emax = 1.e3
+    emin = 0
+    emax = 25
     #e_photons = np.logspace(np.log10(emin),np.log10(emax),M+1) 
     # car 1ev = 1.602e-19 J ==> 1 kev = 1.602e-16 J
     Enorm = k * Te / 1.602e-16
     #print(Enorm)
-    
     
     # x = h*f / k*Te 
     # with f the frequency 
     # x is a no-dimension quantity
     xmin = emin / Enorm
     xmax = emax / Enorm
-    #print(xmax)
-    
-    #xmin = emin
-    #xmax = emax
     
     # Valeurs sur les bords des bins (M+1 values)
-    xb = np.logspace(np.log10(xmin),np.log10(xmax),M+1) 
+    #xb = np.logspace(np.log10(xmin),np.log10(xmax),M+1) 
+    xb = np.linspace(xmin,xmax,M+1) 
+    
     #xb = e_photons/ Enorm
     # Largeur des bins (M valeurs)
     dxa = xb[1:] - xb[:-1]
@@ -351,22 +423,11 @@ def meshGeneration():
     # *1.602e-16 keV ==> J
     f_photons = e_photons * 1.602e-16 / h
     
-    ### initialization of the solution vector : [time][energy] (x is a pseudo-energy)
-    
-    u=np.empty([N,M])
-    # photons injection at 0.5 keV, gaussian width of 0.03keV
-    xinj = 0.5 / Enorm
-    width = 0.03 / Enorm
-    print(xinj, width)
-    u[0]=init_gaussian(xinj, width)
-    
-    # Cette fois, on impose le nombre de photons
-    # STABLE EN DECA DE ~2.4
-    #nbPhotons = 1
+
     
 def solveKompaneets():
     
-    global A,C,Q,pech,col
+    global A,C,Q,pech,col, u, Ndens0
     
     ################# KOMPANEETS EQUATION  PARAMETERS  #################
     
@@ -386,6 +447,25 @@ def solveKompaneets():
     ro2=0
     pech = np.full_like(xa, ro2)            # au milieu          (M)
     
+    ### initialization of the solution vector : [time]["energy"] (x is a pseudo-energy)
+    
+    u=np.empty([N,M])
+    # photons injection at 0.5 keV, gaussian width of 0.03keV
+    einj = 0.5
+    ewidth = 0.03
+    xinj = einj / Enorm
+    width = ewidth / Enorm
+    print(xinj, width)
+    #u[0]=init_gaussian(xinj, width)
+    u[0] = init_planckian(Tp)
+    
+    # Cette fois, on impose le nombre de photons
+    # STABLE EN DECA DE ~2.4
+    #nbPhotons = 1
+    
+    Ndens0 = 8*np.pi * ((k*Te)/(cl*h))**3 * np.sum(u[0]*dxa*xa**2)
+    print("Densité initiale: ",Ndens0)
+    
     
     ############  SOLVING KOMPANEETS EQUATION AND PLOTTING FUNCTIONS  ###########
     
@@ -395,20 +475,29 @@ def solveKompaneets():
     # Plotting parameter
     col = [ cm.jet(x) for x in np.linspace(0, 0.3 , len(tobs))]
     
-    plotDensityFreq()
+    #plotDensityFreq()
     #plotDensity()
     #plotOccupationRate()
-    #plotIntensity()
+    plotIntensity()
     #plotEnergyDensity()
-    
+        
 
 def main():
     
+    global Tp
+    
     defineConstants()
     meshGeneration()
+    Tp=2e7
     solveKompaneets()
-    
 
+
+    """
+    for i in range(10):
+        print("######## Tp={:.1E} keV ##########".format(Tp))
+        solveKompaneets()
+        Tp+=1e6
+    """
 
 if __name__ == "__main__":
     main()
