@@ -11,18 +11,13 @@ import numpy as np
 from scipy.stats import norm
 from scipy.signal import unit_impulse
 from scipy.stats import lognorm
-from scipy.integrate import nquad
 from scipy.integrate import quad
-from math import pow
-from math import exp
-from math import sinh
+from scipy.special import zeta
 import tridiagonal_matrix_solver as tms
 from plotter import linplot
 from plotter import logplot
-from scipy.special import iv as Inu
 import matplotlib.pyplot as plt
 from matplotlib import cm
-from sympy import symbols, Eq, solve
 from scipy.optimize import fsolve
 
 
@@ -72,23 +67,9 @@ def init_dirac(xinj):
     return u0
 
 def init_planckian(Tp):
-      
-    """
-    # we have to set the limits of the planckian distribution we will define
-    e_pho_min = 1e-2
-    e_pho_max =2.5e1
-
-    Enorm = k * Tp / 1.602e-16
     
-    xmin = e_pho_min / Enorm
-    xmax = e_pho_max / Enorm
-    
-    x_pho = np.linspace(xmin,xmax,M)    
-    """
-    
-    u0 = (1 /  (np.exp((h*f_photons)/(k*Tp)) - 1 ))
-    #u0 = (1 /  (np.exp(x_pho) - 1 ))
-
+    #u0 = (1 /  (np.exp((h*f_photons)/(k*Tp)) - 1 ))
+    u0 = (1 /  (np.exp(e_photons/kTp) - 1 ))
     return u0
 
 
@@ -121,34 +102,6 @@ def noLogsetFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
     plt.title(title)
     plt.show()
 
-
-
-def deriv(x):
-    
-    u = x**3
-    ud = 3*x**2
-    v  = np.exp(h*x/(h*Te)) - 1
-    vd = np.exp(h*x/(h*Te))
-    
-    der = ((2*h)/cl**2) * (ud*v - u*vd) / v**2
-    print(der)
-    return der
-    
-    
-def findMin():
-    
-    
-    alpha = 0.02
-    delta=1e-2
-    xprev=0
-    x=1
-    
-    while abs(x-xprev) > delta:
-        xprev=x
-        x=x-alpha*deriv(x)
-        print("new x")
-        
-    print("------ xmax = ",x)
 
 # solve the equation with the chang-cooper scheme
 def changCooper(pech, Q, dT):
@@ -257,7 +210,6 @@ def plotDensity():
         #phoDens = ((8*np.pi)/cl**3) * (u[index]*(f_photons**2)) * 2.4e17
         phoDens = ((8*np.pi)/cl**3) * (u[index]*(f_photons**2)*1.602e-16) / h 
         #phoDens = u[index]*e_photons**2
-        # multiply by Enorm as we represent the energy in abscisse
         plt.plot(e_photons, phoDens, color = col[i],label='t={:.1E}s'.format(tt))
     
     setFigureParameters('Photon Number Density $ (nbPhotons . m^{-3} . keV^{-1})$','Energy (keV)',1e20,1e30,1e-4,1e3)
@@ -273,7 +225,7 @@ def plotIntensity():
     
     # Calculus of the final density (after 30s)
     # Must be constant (same as the initial one)
-    Ndens = 8*np.pi * ((k*Te)/(cl*h)) * np.sum(u[N-1]*xa*xa*dxa)
+    Ndens = 8*np.pi * ((k*Te)/(cl*h)) * np.sum(u[N-1]*xa**2*dxa)
     print("Densité finale: ",Ndens)
 
     for i,tt in enumerate(tobs):
@@ -289,8 +241,28 @@ def plotIntensity():
         # multiply by Enorm as we represent the energy in abscisse
         plt.plot(e_photons, intensity, color = col[i],label='t={:.1E}s'.format(tt))
     
-    title='Tp={:.1E} keV ==> Densité de photons associée: {:.1E} m^-3'.format(Tp, Ndens0)
-    noLogsetFigureParameters(title, 'Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',0,3e3,1e-2,2.5e1)
+    
+    ######  comparison with the plot from the los alamos paper  ######
+    
+    
+    ynorm=0.98e-3
+    
+    x0, y0 = np.loadtxt('data_t0.csv', delimiter=';', unpack=True)
+    plt.plot(x0,y0*ynorm, label='data from los alamos (t=0s)', color='red')
+
+    x01, y01 = np.loadtxt('data_t01.csv', delimiter=';', unpack=True)
+    plt.plot(x01,y01*ynorm, label='data from los alamos (t=0.1s)', color='darkgreen')
+
+
+    x02, y02 = np.loadtxt('data_t02.csv', delimiter=';', unpack=True)
+    plt.plot(x02,y02*ynorm, label='data from los alamos (t=0.2s)', color='green')
+    
+    x05, y05 = np.loadtxt('data_t05.csv', delimiter=';', unpack=True)
+    plt.plot(x05,y05*ynorm, label='data from los alamos (t=0.5s)', color='limegreen')    
+    
+    
+    title='Tp={:.1f} keV ==> Densité de photons associée: {:.1E} m^-3'.format(kTp, Ndens0)
+    noLogsetFigureParameters(title, 'Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',0,4e3,1e-3,2.5e1)
     #setFigureParameters('Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',1e-1,5e7,1e-4,1e3)
 
 
@@ -298,7 +270,7 @@ def plotEnergyDensity():
     
     print("Plotting Energy density... ")
     
-    t = np.linspace(dt, tmax/5, 25, endpoint=True)
+    t = np.linspace(dt, tmax/5., 25., endpoint=True)
     Er = np.zeros(25)
     i=0
     for tt in t:
@@ -343,9 +315,14 @@ def findCst():
 
 ####################################################
 
+def findNmax():
+    
+    Nmax = 8*np.pi*(((k*Te)/(cl*h))**3)*2*zeta(3)
+    return Nmax
+
 def defineConstants():
     
-    global k,h,Te,cl,sT,Ne,me,tobs
+    global k,h,Te,cl,sT,Ne,me,tobs, kTe
 
     #################  CONSTANTS  #################
     
@@ -354,8 +331,10 @@ def defineConstants():
     # Planck constant
     h = 6.626e-34
     # Temperature of the electron field (K)
-    # 1keV ~ k*1.1e7 
-    Te = 1e7
+    # kTe in keV 
+    kTe = 1.
+    # Te in K
+    Te = kTe * 1.602e-16 / k
     cl= 3e8
     # Thompson scattering cross section
     sT = 6.652e-29
@@ -367,7 +346,7 @@ def defineConstants():
 
 def meshGeneration():
     
-    global xb,xa,dxa,dxb,tobs,tmax,dt,dto,N,M,Enorm, f_photons, e_photons
+    global xb,xa,dxa,dxb,tobs,tmax,dt,dto,N,M, f_photons, e_photons
 
     #########################  MESH GENERATION  #######################
     
@@ -380,7 +359,10 @@ def meshGeneration():
     #tobs = 5e-9 * np.arange(12)
     #tobs = np.arange(0,26e-8,5e-8)
     tobs = [0, 1e-7, 3e-7, 4e-7]
-    tobs = [0, 2e-1]
+    tobs = [0, 2e1] # stabilité atteinte    
+    tobs = [0, 1e-1, 1.26e0, 4.4e0] 
+    #tobs = [0, 1e-1, 0.2, 0.5] 
+    
     tmax= tobs[len(tobs)-1]
     
     dt=1e-3
@@ -389,28 +371,23 @@ def meshGeneration():
     N=int(tmax/dt)
     
     #### "energy" mesh  ################################
-    
+
     M=100
     
     # the energy carried by the photons (keV)
-    emin = 0
-    emax = 25
-    #e_photons = np.logspace(np.log10(emin),np.log10(emax),M+1) 
-    # car 1ev = 1.602e-19 J ==> 1 kev = 1.602e-16 J
-    Enorm = k * Te / 1.602e-16
-    #print(Enorm)
+    emin = 1e-1
+    emax = 25.
     
     # x = h*f / k*Te 
     # with f the frequency 
     # x is a no-dimension quantity
-    xmin = emin / Enorm
-    xmax = emax / Enorm
+    xmin = emin / kTe
+    xmax = emax / kTe
     
     # Valeurs sur les bords des bins (M+1 values)
     #xb = np.logspace(np.log10(xmin),np.log10(xmax),M+1) 
     xb = np.linspace(xmin,xmax,M+1) 
     
-    #xb = e_photons/ Enorm
     # Largeur des bins (M valeurs)
     dxa = xb[1:] - xb[:-1]
     # valeurs au centre des bins (M valeurs)
@@ -419,7 +396,7 @@ def meshGeneration():
     dxb = xa[1:] - xa[:-1]
     
     # energy and frequency vectors
-    e_photons = xa * Enorm
+    e_photons = np.linspace(emin,emax,M)   
     # *1.602e-16 keV ==> J
     f_photons = e_photons * 1.602e-16 / h
     
@@ -453,8 +430,8 @@ def solveKompaneets():
     # photons injection at 0.5 keV, gaussian width of 0.03keV
     einj = 0.5
     ewidth = 0.03
-    xinj = einj / Enorm
-    width = ewidth / Enorm
+    xinj = einj / kTe
+    width = ewidth / kTe
     print(xinj, width)
     #u[0]=init_gaussian(xinj, width)
     u[0] = init_planckian(Tp)
@@ -480,24 +457,37 @@ def solveKompaneets():
     #plotOccupationRate()
     plotIntensity()
     #plotEnergyDensity()
-        
+
+def plotFromCsv():
+    
+    x, y = np.loadtxt('data.csv', delimiter=';', unpack=True)
+    plt.plot(x,y*1e-3, label='data from los alamos (t=0.1s)')
+    
+    noLogsetFigureParameters('los alamos', 'Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',0,4e3,1e-3,2.5e1)
+
 
 def main():
     
-    global Tp
+    global Tp, kTp
     
     defineConstants()
     meshGeneration()
-    Tp=2e7
-    solveKompaneets()
-
-
+    kTp = 2.
+    Tp = kTp * 1.602e-16 / k
+    solveKompaneets()  
+    
     """
     for i in range(10):
         print("######## Tp={:.1E} keV ##########".format(Tp))
         solveKompaneets()
         Tp+=1e6
+        kTp = k*Tp/1.602e-16
     """
+    
+    Nmax=findNmax()
+    print(Nmax)
+    
+    #plotFromCsv()
 
 if __name__ == "__main__":
     main()
