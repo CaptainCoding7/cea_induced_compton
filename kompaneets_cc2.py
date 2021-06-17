@@ -13,6 +13,7 @@ from scipy.signal import unit_impulse
 from scipy.stats import lognorm
 from scipy.integrate import quad
 from scipy.special import zeta
+from scipy.special import gamma as Gammaf
 import tridiagonal_matrix_solver as tms
 from plotter import linplot
 from plotter import logplot
@@ -29,9 +30,90 @@ u: solutions of the equation for different instants
 """
 
 
-def synch(M,x):
+def Ps(w,p):
+    
+    fact=27*np.sqrt(3.0)/16.0/np.pi
+    b=.02
+    c=1.75
+    d=3.45
+    R0 = 2**(1./3)/5*Gammaf(1./3)**2
+    g = np.sqrt(p*p+1)
+    f = 2/(0.01*p+p**2) * (b + b*c*p + d*p*p/3.0) / ( 1.0 + c*p + d*p*p)
+    j = np.zeros_like(w)
+    X = f*(w-1./(g+p)) 
+    j[X>0] = X[X>0]**(1./3.) / np.sqrt(1+(2*R0/np.pi)**2*X[X>0]**(2./3.)) * np.exp(-X[X>0])
+    j[X>0] = f * R0 * p*p * j[X>0]
+    j[X>0] = fact * j[X>0]
+    
+    return j
 
-    return x*0
+def computej(w, Ub, nuL, p):
+    
+    return (4/3) * (sT*Ub / (4*np.pi*nuL)) * Ne * Ps(w,p)
+
+   
+def integJTh(p,Ub):
+       print(Ub)
+       return 4*p*p*Ub*Ne*cl*sT/4/np.pi
+
+
+def synch():
+
+    ## calculus and plotting of the synchrotron radiation    
+
+    M=10000
+    numin=1e18
+    numax=1e24
+    nu = np.logspace(np.log10(numin),np.log10(numax),M)
+    #print("{:.1E}".format(nu[0]), nu[len(nu)-1])
+    
+    B=np.linspace(1e9,1e10,10)
+    
+    for b in B:
+    
+        #plus B est faible (respt fort), plus nu doit couvrir des freq basses (respt hautes)
+        #B=1.e10
+        
+        """
+        beta = v/cl
+        gamma = 1/np.sqrt(1-beta**2)
+        Pe = gamma.me.nu
+        p = Pe/me/cl
+        """
+        p = 10
+        
+        #Larmor frequency
+        nuL = qe*b/me/2/np.pi
+        Ub=b**2/2/mu0
+        w=nu/nuL
+        
+        j=computej(w, Ub, nuL, p)
+        J = quad(computej,0,np.inf,args=(Ub,nuL,p))
+        Jth = integJTh(p, Ub)
+        
+        print("Jth = {:.4E} (pour B = {:.1E})".format(Jth,b))
+        print("J = {:.4E} (pour B = {:.1E})".format(J[0],b))
+        #print(j)
+        plt.plot(nu,j, label='B={:.1E} T'.format(b))
+    
+    setFigureParameters("Spectre de l'émissivité synchrotron pour p={:.1E} et Ne={:.1E}".format(p,Ne),'j(nu)','nu',5e-4,5e0,numin,numax)
+
+
+def testPs(w):
+        
+    ############## tests fonction Ps    
+
+    p = [1e-3, 1e-2, 1.e-1, 1, 1.e1]
+    col = [ cm.jet(x) for x in np.linspace(0, 0.3 , len(p))]
+
+    for i, pp in enumerate(p):
+        PS=Ps(w,p[i])
+        plt.plot(w,PS, color=col[i], label="p = {:.3f}".format(pp))
+        print("p = ",p[i], " | p^2 = ",p[i]**2, " | integral_Ps = ", quad(Ps,0,np.inf,args=(p[i],))[0])
+        
+    setFigureParameters('Ps(w,p)','nu/nuL',1e-2,5e0,1e-2,3e3)
+    
+    
 
 def init_gaussian(xinj, width):
 
@@ -73,7 +155,7 @@ def init_planckian(Tp):
     return u0
 
 
-def setFigureParameters(ylabel, xlabel, ymin, ymax,  xmin, xmax):
+def setFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
     
     # Reglages affichage
     plt.xscale('log')
@@ -81,6 +163,7 @@ def setFigureParameters(ylabel, xlabel, ymin, ymax,  xmin, xmax):
     leg = plt.legend(loc="upper right",prop={'size': 7}, bbox_to_anchor=[1, 1],
                      ncol=1, shadow=True, title="Legend", fancybox=True)
     leg.get_title().set_color("black")
+    plt.title(title)
     plt.ylim(ymin,ymax)
     plt.xlim(xmin,xmax)
     plt.xlabel(xlabel)
@@ -241,29 +324,8 @@ def plotIntensity():
         # multiply by Enorm as we represent the energy in abscisse
         plt.plot(e_photons, intensity, color = col[i],label='t={:.1E}s'.format(tt))
     
-    
-    ######  comparison with the plot from the los alamos paper  ######
-    
-    
-    ynorm=0.98e-3
-    
-    x0, y0 = np.loadtxt('data_t0.csv', delimiter=';', unpack=True)
-    plt.plot(x0,y0*ynorm, label='data from los alamos (t=0s)', color='red')
 
-    x01, y01 = np.loadtxt('data_t01.csv', delimiter=';', unpack=True)
-    plt.plot(x01,y01*ynorm, label='data from los alamos (t=0.1s)', color='darkgreen')
-
-
-    x02, y02 = np.loadtxt('data_t02.csv', delimiter=';', unpack=True)
-    plt.plot(x02,y02*ynorm, label='data from los alamos (t=0.2s)', color='green')
-    
-    x05, y05 = np.loadtxt('data_t05.csv', delimiter=';', unpack=True)
-    plt.plot(x05,y05*ynorm, label='data from los alamos (t=0.5s)', color='limegreen')    
-    
-    
-    title='Tp={:.1f} keV ==> Densité de photons associée: {:.1E} m^-3'.format(kTp, Ndens0)
-    noLogsetFigureParameters(title, 'Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',0,4e3,1e-3,2.5e1)
-    #setFigureParameters('Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',1e-1,5e7,1e-4,1e3)
+    setFigureParameters('Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',1e-1,5e7,1e-4,1e3)
 
 
 def plotEnergyDensity():
@@ -322,7 +384,7 @@ def findNmax():
 
 def defineConstants():
     
-    global k,h,Te,cl,sT,Ne,me,tobs, kTe
+    global k,h,Te,cl,sT,Ne,me,qe,mu0,tobs, kTe, Tp, kTp
 
     #################  CONSTANTS  #################
     
@@ -335,13 +397,22 @@ def defineConstants():
     kTe = 1.
     # Te in K
     Te = kTe * 1.602e-16 / k
-    cl= 3e8
+    cl = 3e8
     # Thompson scattering cross section
     sT = 6.652e-29
     # Electron number density (in m^-3)
-    Ne=2e22
-    # Electron mass
-    me=9.109e-31
+    Ne = 1e23
+    # Electron mass (in kg)
+    me = 9.109e-31
+    # Electron charge (in C)
+    qe = 1.602e-19
+    #permeabilité magnetique du vide
+    mu0 = np.pi*4e-7
+    
+    
+    # Photon temperature
+    kTp = 2.
+    Tp = kTp * 1.602e-16 / k
     
 
 def meshGeneration():
@@ -360,23 +431,25 @@ def meshGeneration():
     #tobs = np.arange(0,26e-8,5e-8)
     tobs = [0, 1e-7, 3e-7, 4e-7]
     tobs = [0, 2e1] # stabilité atteinte    
-    tobs = [0, 1e-1, 1.26e0, 4.4e0] 
-    #tobs = [0, 1e-1, 0.2, 0.5] 
     
     tmax= tobs[len(tobs)-1]
     
-    dt=1e-3
+    dt=1e-2
     dto =  nu * dt
-    print("dt;dto: ",dt,dto)
+    #print("dt;dto: ",dt,dto)
     N=int(tmax/dt)
     
     #### "energy" mesh  ################################
 
-    M=100
+    M=1000
     
     # the energy carried by the photons (keV)
-    emin = 1e-1
-    emax = 25.
+    emin = 1e-3
+    emax = 1e3
+    e_photons = np.linspace(emin,emax,M)   
+    # frequency vector
+    # *1.602e-16 keV ==> J
+    f_photons = e_photons * 1.602e-16 / h
     
     # x = h*f / k*Te 
     # with f the frequency 
@@ -395,12 +468,6 @@ def meshGeneration():
     # distance entre les milieux (M-1 valeurs)
     dxb = xa[1:] - xa[:-1]
     
-    # energy and frequency vectors
-    e_photons = np.linspace(emin,emax,M)   
-    # *1.602e-16 keV ==> J
-    f_photons = e_photons * 1.602e-16 / h
-    
-
     
 def solveKompaneets():
     
@@ -458,36 +525,19 @@ def solveKompaneets():
     plotIntensity()
     #plotEnergyDensity()
 
-def plotFromCsv():
-    
-    x, y = np.loadtxt('data.csv', delimiter=';', unpack=True)
-    plt.plot(x,y*1e-3, label='data from los alamos (t=0.1s)')
-    
-    noLogsetFigureParameters('los alamos', 'Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',0,4e3,1e-3,2.5e1)
-
 
 def main():
     
-    global Tp, kTp
-    
     defineConstants()
     meshGeneration()
-    kTp = 2.
-    Tp = kTp * 1.602e-16 / k
-    solveKompaneets()  
     
-    """
-    for i in range(10):
-        print("######## Tp={:.1E} keV ##########".format(Tp))
-        solveKompaneets()
-        Tp+=1e6
-        kTp = k*Tp/1.602e-16
-    """
+    #solveKompaneets()  
     
-    Nmax=findNmax()
-    print(Nmax)
+    synch()
     
-    #plotFromCsv()
+    #Nmax=findNmax()
+    #print(Nmax)
+    
 
 if __name__ == "__main__":
     main()
