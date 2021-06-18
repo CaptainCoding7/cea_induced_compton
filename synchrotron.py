@@ -31,11 +31,11 @@ def generNu():
     """
     generation of the frequency mesh
     """
-    global nu, numin, numax
+    global nu
     
     M=100
-    numin=1e18
-    numax=1e24
+    numin=1e17
+    numax=1e22
     nu = np.logspace(np.log10(numin),np.log10(numax),M)
 
 def setParameters(B):
@@ -72,7 +72,7 @@ def Ps(w,p):
     
     return j
 
-def computej(nu, Ub, nuL, p):
+def j_nu_p(nu, Ub, nuL, p):
     """
     calculation of j(nu,p)
     """
@@ -97,13 +97,13 @@ def jMaxBol(xp, nu, Ub, nuL, K2, theta):
     calculus of j(nu,p)*f(p,theta)
     """
     
-    return computej(nu, Ub, nuL, xp) * f_p(xp, K2, theta)
+    return j_nu_p(nu, Ub, nuL, xp) * f_p(xp, K2, theta)
 
 
-def computeJ_nu_theta(B, p, nuL, Ub, theta, K2):
+def J_nu_theta(B, p, nuL, Ub, theta, K2):
     """
-    Calculus and plotting of the synchrotron radiation J(nu,theta) for a Maxwell-Boltzmann distribution of electrons
-    Depends on the temperature theta whcich define the profile of the distribution
+    Calculus and plotting of the synchrotron emission J(nu,theta) for a Maxwell-Boltzmann distribution of electrons
+    Depends on the temperature theta which defines the profile of the distribution
     """
     
     # initialization of the array
@@ -117,10 +117,38 @@ def computeJ_nu_theta(B, p, nuL, Ub, theta, K2):
         
     plt.plot(nu, J_theta)
     
-    setFigureParameters("Tracé de l'émissivité synchrotron J(nu,theta) pour un gaz d'électrons chauffé à 100 keV",'J(nu,theta)','nu',5e-0,5e8,nu[0],nu[-1])      
+    setFigureParameters("Tracé de l'émissivité synchrotron J(nu,theta) pour un gaz d'électrons chauffé à {:} keV".format(kTe),
+                        r'$J_\nu(\nu,\theta)$',r'$\nu$',5e5,5e8,1e2*nu[0],nu[-1])      
     
+    return J_theta
 
+def alpha_nu_theta(B, p, nuL, Ub, theta, K2):
+    
+    alpha = J_nu_theta(B, p, nuL, Ub, theta, K2) / B_nu(theta)
+    plt.plot(nu, alpha)
+    
+    setFigureParameters(r"Tracé de l'absorption synchrotron $\alpha_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à {:} keV".format(kTe)
+                        ,r'$\alpha_\nu(\nu,\theta)$',r'$\nu$',5e3,5e30,1e3*nu[0],1e3*nu[-1])      
+    print(alpha)
+    return alpha 
 
+def B_nu(theta):
+    """
+    Planck's black body law
+    """
+    
+    B_nu = ((2*h)/cl**2) * nu**3 * ( (1 / (np.exp((h*nu)/(k*Te)) - 1 ))) 
+    print(B_nu)
+    
+    
+    plt.plot(nu, B_nu)
+    
+    setFigureParameters(r"$B_\nu$".format(kTe)
+                        ,r'$\alpha_\nu(\nu,\theta)$',r'$\nu$',5e3,5e10,nu[0],nu[-1])      
+    
+    
+    
+    return B_nu
 
 #######################################################################
 ###################  TEST FUNCTIONS  #############################
@@ -179,8 +207,8 @@ def testj_same_p(p, Ub, nuL):
      
         gamma = np.sqrt(p*p+1)
 
-        j=computej(nu, Ub, nuL, p)
-        J = quad(computej,nuL/(p+gamma),nuL*10*3*gamma**2/2,args=(Ub,nuL,p))
+        j=j_nu_p(nu, Ub, nuL, p)
+        J = quad(j_nu_p,nuL/(p+gamma),nuL*10*3*gamma**2/2,args=(Ub,nuL,p))
         Jth = integJTh(p, Ub)
         
         print("Jth = {:.4E} (pour B = {:.1E})".format(Jth,b))
@@ -188,7 +216,32 @@ def testj_same_p(p, Ub, nuL):
         #print(j)
         plt.plot(nu,j, label='B={:.1E} T'.format(b))
 
-    setFigureParameters("Spectre de l'émissivité synchrotron pour p={:.1E} et Ne={:.1E}".format(p,Ne),'j(nu)','nu',5e3,5e7,numin,numax)
+    setFigureParameters("Spectre de l'émissivité synchrotron pour p={:.1E} et Ne={:.1E}".format(p,Ne),'j(nu)','nu',5e3,5e7,nu[0],nu[-1])
+
+def testJ_nu_theta(B, p, nuL, Ub, theta, K2):
+    
+    global temp
+    temps = np.logspace(0, 5, 6)
+    for temp in temps:
+        # Te in K
+        Te = temp * 1.602e-16 / k
+        theta = k*Te/me/cl**2
+        K2 = kve(2, 1/theta)
+
+       # initialization of the array
+        J_theta = np.zeros_like(nu)
+    
+        # for each frequency, evaluate J, the integral of j(nu,p)*f(p,theta) over p
+        # as we can't take inf for the sup limit, we choose a mulitple of the characteristics border of the spectrum
+        sup = 10*np.sqrt(theta *(1+theta))
+        for i,nuu in enumerate(nu):
+            J_theta[i], err = quad(jMaxBol,0, sup, args=(nuu, Ub, nuL, K2, theta))
+            
+        plt.plot(nu, J_theta, label="Temp = {:.0E} kev".format(temp))
+        
+    setFigureParameters(r"Tracé de l'émissivité synchrotron $J_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à différentes températures"
+                        ,r'$J_\nu(\nu,\theta)$',r'$\nu$',5e5,5e8,nu[0],nu[-1])      
+        
 
 ####################################################################
 ###################################################################
@@ -199,13 +252,13 @@ def synch():
 
     generNu()
     
-    B=5e9
-    p = np.linspace(1e-3, 1e1, 1000)
+    B=1e10
+    p = np.linspace(1e-3, 1e1, 100)
     
     nuL, Ub, theta, K2 = setParameters(B)
 
     
-    plotfp(p, B, K2, theta)
+    #plotfp(p, B, K2, theta)
     #testPs(nu,nuL)
     # tests pour différentes valeurs de p (le même pour tous les électrons)
     """
@@ -214,7 +267,8 @@ def synch():
         print("\n******  p = {:.1E}".format(pp))
         testj_same_p(pp, Ub, nuL)
     """    
-    #computeJ_nu_theta(B, p, nuL, Ub, theta, K2)
-
+    #testJ_nu_theta(B, p, nuL, Ub, theta, K2)
+    #J_nu_theta(B, p, nuL, Ub, theta, K2)
+    alpha_nu_theta(B, p, nuL, Ub, theta, K2)
     
 synch()
