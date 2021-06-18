@@ -15,12 +15,13 @@ from scipy.integrate import quad
 from scipy.special import zeta
 from scipy.special import gamma as Gammaf
 import tridiagonal_matrix_solver as tms
-from plotter import linplot
-from plotter import logplot
+from plotter import setFigureParameters
+from plotter import noLogsetFigureParameters
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from scipy.optimize import fsolve
-
+from synchrotron import synch
+from constants import k,h,Te,cl,sT,Ne,me,qe,mu0,tobs, kTe, Tp, kTp
 
 
 """
@@ -30,92 +31,10 @@ u: solutions of the equation for different instants
 """
 
 
-def Ps(w,p):
-    
-    fact=27*np.sqrt(3.0)/16.0/np.pi
-    b=.02
-    c=1.75
-    d=3.45
-    R0 = 2**(1./3)/5*Gammaf(1./3)**2
-    g = np.sqrt(p*p+1)
-    f = 2/(0.01*p+p**2) * (b + b*c*p + d*p*p/3.0) / ( 1.0 + c*p + d*p*p)
-    j = np.zeros_like(w)
-    X = f*(w-1./(g+p)) 
-    j[X>0] = X[X>0]**(1./3.) / np.sqrt(1+(2*R0/np.pi)**2*X[X>0]**(2./3.)) * np.exp(-X[X>0])
-    j[X>0] = f * R0 * p*p * j[X>0]
-    j[X>0] = fact * j[X>0]
-    
-    return j
-
-def computej(w, Ub, nuL, p):
-    
-    return (4/3) * (sT*Ub / (4*np.pi*nuL)) * Ne * Ps(w,p)
-
-   
-def integJTh(p,Ub):
-       print(Ub)
-       return 4*p*p*Ub*Ne*cl*sT/4/np.pi
-
-
-def synch():
-
-    ## calculus and plotting of the synchrotron radiation    
-
-    M=10000
-    numin=1e18
-    numax=1e24
-    nu = np.logspace(np.log10(numin),np.log10(numax),M)
-    #print("{:.1E}".format(nu[0]), nu[len(nu)-1])
-    
-    B=np.linspace(1e9,1e10,10)
-    
-    for b in B:
-    
-        #plus B est faible (respt fort), plus nu doit couvrir des freq basses (respt hautes)
-        #B=1.e10
-        
-        """
-        beta = v/cl
-        gamma = 1/np.sqrt(1-beta**2)
-        Pe = gamma.me.nu
-        p = Pe/me/cl
-        """
-        p = 10
-        
-        #Larmor frequency
-        nuL = qe*b/me/2/np.pi
-        Ub=b**2/2/mu0
-        w=nu/nuL
-        
-        j=computej(w, Ub, nuL, p)
-        J = quad(computej,0,np.inf,args=(Ub,nuL,p))
-        Jth = integJTh(p, Ub)
-        
-        print("Jth = {:.4E} (pour B = {:.1E})".format(Jth,b))
-        print("J = {:.4E} (pour B = {:.1E})".format(J[0],b))
-        #print(j)
-        plt.plot(nu,j, label='B={:.1E} T'.format(b))
-    
-    setFigureParameters("Spectre de l'émissivité synchrotron pour p={:.1E} et Ne={:.1E}".format(p,Ne),'j(nu)','nu',5e-4,5e0,numin,numax)
-
-
-def testPs(w):
-        
-    ############## tests fonction Ps    
-
-    p = [1e-3, 1e-2, 1.e-1, 1, 1.e1]
-    col = [ cm.jet(x) for x in np.linspace(0, 0.3 , len(p))]
-
-    for i, pp in enumerate(p):
-        PS=Ps(w,p[i])
-        plt.plot(w,PS, color=col[i], label="p = {:.3f}".format(pp))
-        print("p = ",p[i], " | p^2 = ",p[i]**2, " | integral_Ps = ", quad(Ps,0,np.inf,args=(p[i],))[0])
-        
-    setFigureParameters('Ps(w,p)','nu/nuL',1e-2,5e0,1e-2,3e3)
-    
-    
-
 def init_gaussian(xinj, width):
+    """
+    initialization of the photons distribution with a gaussian profile
+    """
 
     # on identifie le bin correspondant a xinj
     iinj = np.argwhere(xb<xinj)[-1]
@@ -128,6 +47,9 @@ def init_gaussian(xinj, width):
 
 
 def init_dirac(xinj):
+    """
+    initialization of the photons distribution with a dirac profile
+    """
         
     #xinj = np.sqrt(nbPhotons)
     
@@ -149,46 +71,21 @@ def init_dirac(xinj):
     return u0
 
 def init_planckian(Tp):
+    """
+    initialization of the photons distribution with a planckian profile
+    """
     
     #u0 = (1 /  (np.exp((h*f_photons)/(k*Tp)) - 1 ))
     u0 = (1 /  (np.exp(e_photons/kTp) - 1 ))
     return u0
 
 
-def setFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
-    
-    # Reglages affichage
-    plt.xscale('log')
-    plt.yscale('log')
-    leg = plt.legend(loc="upper right",prop={'size': 7}, bbox_to_anchor=[1, 1],
-                     ncol=1, shadow=True, title="Legend", fancybox=True)
-    leg.get_title().set_color("black")
-    plt.title(title)
-    plt.ylim(ymin,ymax)
-    plt.xlim(xmin,xmax)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.show()
-    
-def noLogsetFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
-    
-    # Reglages affichage
-    #plt.xscale('log')
-    leg = plt.legend(loc="upper right",prop={'size': 7}, bbox_to_anchor=[1, 1],
-                     ncol=1, shadow=True, title="Legend", fancybox=True)
-    leg.get_title().set_color("black")
-    plt.ylim(ymin,ymax)
-    plt.xlim(xmin,xmax)
-     #   plt.xticks([1, 2, 3, 4, 5])
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.show()
 
-
-# solve the equation with the chang-cooper scheme
 def changCooper(pech, Q, dT):
-            
+    """
+    solve the equation with the chang-cooper scheme
+    """
+    
     #print(dT)
     
     #dT=dt
@@ -239,7 +136,9 @@ def plotOccupationRate():
     
     
 def plotDensityFreq():
-    
+    """
+    plot the evolving photons density as a function of the frequency
+    """
     print("Plotting spectral density...")
                   
     phoDensTh = ((8*np.pi)/cl**3) * f_photons**2 / (findCst()*np.exp((h*f_photons)/(k*Te)) - 1 ) 
@@ -266,7 +165,9 @@ def plotDensityFreq():
     
     
 def plotDensity():
-    
+    """
+    plot the evolving photons density as a function of the energy (keV)
+    """
     print("Plotting density...")
                  
     phoDensTh = ((8*np.pi)/cl**3) * f_photons**2 * (1 / (findCst()*np.exp((h*f_photons)/(k*Te)) - 1 )) *1.602e-16 / h 
@@ -286,22 +187,27 @@ def plotDensity():
         
         # plot the photon density rate
         """
-        two to convert the density from nbPho/m3/Hz into nbPho/m3/kev
-        - 1kev = 2.4e17
+        two ways to convert the density from nbPho/m3/Hz into nbPho/m3/kev
+        - 1kev = 2.4e17 Hz
         - E=h.nu ==> divide by h (and  multiply by 1.602e-16)
         """
         #phoDens = ((8*np.pi)/cl**3) * (u[index]*(f_photons**2)) * 2.4e17
         phoDens = ((8*np.pi)/cl**3) * (u[index]*(f_photons**2)*1.602e-16) / h 
-        #phoDens = u[index]*e_photons**2
         plt.plot(e_photons, phoDens, color = col[i],label='t={:.1E}s'.format(tt))
     
     setFigureParameters('Photon Number Density $ (nbPhotons . m^{-3} . keV^{-1})$','Energy (keV)',1e20,1e30,1e-4,1e3)
 
 
 def plotIntensity():
+    """
+    plot the sepctral radiance (intensité specifique) as a function of the energy
+    """
     
     print("Plotting intensity...")
     
+    """
+    comparison with the theoritical solution
+    """
     #C=findCst()
     #intensityTh = ((2*h)/cl**2) * f_photons**3 * ( (1 /  (C*np.exp((h*f_photons)/(k*Te)) - 1 ))) 
     #plt.plot(e_photons, intensityTh, "+", color='red',label='theoritical solution')
@@ -327,29 +233,6 @@ def plotIntensity():
 
     setFigureParameters('Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',1e-1,5e7,1e-4,1e3)
 
-
-def plotEnergyDensity():
-    
-    print("Plotting Energy density... ")
-    
-    t = np.linspace(dt, tmax/5., 25., endpoint=True)
-    Er = np.zeros(25)
-    i=0
-    for tt in t:
-        index = int(tt / dt) - 1
-        print(index)
-        # Calculus of the photon energy density
-        Er[i] = ( ((2*(k*Te)**4) / ((h**3)*(cl**3) )) * np.sum(u[index]*4*np.pi*xa**3))
-        #Er[i] = (8*np.pi**5*k**4/(15*h**3*cl**3))*Te**4
-        print(Er[i])
-        i+=1
-    Ee = (3/2)*Ne*k*np.full_like(Er,Te)
-    print(Ee)
-    plt.plot(t, Ee,label='Ee')    
-    plt.plot(t, Er,label='Er')
-        
-    setFigureParameters('Photon Energy Density $ (erg . m^{-3})$','Time (s)',1e12, 1e21,0,tmax/5)
-    
     
 def BEDistrib(x,c):
     """
@@ -359,7 +242,6 @@ def BEDistrib(x,c):
     
 
 def F(c):
-    
     """
     the equation used to find the constant
     """
@@ -369,7 +251,7 @@ def F(c):
 
 def findCst():
     """
-    Function used to find the cst of the Bose-Einstein solution
+    Function used to find the cst of the theoritical Bose-Einstein solution
     """    
     root = fsolve(F,2)
     print("cst = ",root[0])
@@ -378,44 +260,17 @@ def findCst():
 ####################################################
 
 def findNmax():
-    
+    """
+    the theoritical maximal density below which there is no BE condensate
+    """
     Nmax = 8*np.pi*(((k*Te)/(cl*h))**3)*2*zeta(3)
     return Nmax
 
-def defineConstants():
-    
-    global k,h,Te,cl,sT,Ne,me,qe,mu0,tobs, kTe, Tp, kTp
-
-    #################  CONSTANTS  #################
-    
-    # Boltzman constant
-    k = 1.381e-23
-    # Planck constant
-    h = 6.626e-34
-    # Temperature of the electron field (K)
-    # kTe in keV 
-    kTe = 1.
-    # Te in K
-    Te = kTe * 1.602e-16 / k
-    cl = 3e8
-    # Thompson scattering cross section
-    sT = 6.652e-29
-    # Electron number density (in m^-3)
-    Ne = 1e23
-    # Electron mass (in kg)
-    me = 9.109e-31
-    # Electron charge (in C)
-    qe = 1.602e-19
-    #permeabilité magnetique du vide
-    mu0 = np.pi*4e-7
-    
-    
-    # Photon temperature
-    kTp = 2.
-    Tp = kTp * 1.602e-16 / k
-    
 
 def meshGeneration():
+    """
+    generation of the time and energy meshes
+    """
     
     global xb,xa,dxa,dxb,tobs,tmax,dt,dto,N,M, f_photons, e_photons
 
@@ -470,6 +325,10 @@ def meshGeneration():
     
     
 def solveKompaneets():
+    """
+    solve the Kompaneets equation with the chang-cooper scheme
+    call on of the plotting function
+    """
     
     global A,C,Q,pech,col, u, Ndens0
     
@@ -526,18 +385,14 @@ def solveKompaneets():
     #plotEnergyDensity()
 
 
-def main():
+def mainKompaneets():
     
-    defineConstants()
     meshGeneration()
+
+    solveKompaneets()  
     
-    #solveKompaneets()  
+    Nmax=findNmax()
     
-    synch()
     
-    #Nmax=findNmax()
     #print(Nmax)
     
-
-if __name__ == "__main__":
-    main()
