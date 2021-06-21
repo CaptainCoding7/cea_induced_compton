@@ -7,6 +7,7 @@ Created on Thu Jun 17 14:17:42 2021
 
 import numpy as np
 from scipy.integrate import quad
+from scipy.integrate import odeint
 from scipy.special import gamma as Gammaf
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -34,8 +35,8 @@ def generNu():
     global nu
     
     M=100
-    numin=1e17
-    numax=1e22
+    numin=1e12
+    numax=1e16
     nu = np.logspace(np.log10(numin),np.log10(numax),M)
 
 def setParameters(B):
@@ -117,38 +118,85 @@ def J_nu_theta(B, p, nuL, Ub, theta, K2):
         
     plt.plot(nu, J_theta)
     
-    setFigureParameters("Tracé de l'émissivité synchrotron J(nu,theta) pour un gaz d'électrons chauffé à {:} keV".format(kTe),
+    setFigureParameters(r"Tracé de l'émissivité synchrotron $J_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à {:} keV".format(kTe),
                         r'$J_\nu(\nu,\theta)$',r'$\nu$',5e5,5e8,1e2*nu[0],nu[-1])      
     
     return J_theta
 
-def alpha_nu_theta(B, p, nuL, Ub, theta, K2):
-    
-    alpha = J_nu_theta(B, p, nuL, Ub, theta, K2) / B_nu(theta)
-    plt.plot(nu, alpha)
-    
-    setFigureParameters(r"Tracé de l'absorption synchrotron $\alpha_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à {:} keV".format(kTe)
-                        ,r'$\alpha_\nu(\nu,\theta)$',r'$\nu$',5e3,5e30,1e3*nu[0],1e3*nu[-1])      
-    print(alpha)
-    return alpha 
 
 def B_nu(theta):
     """
     Planck's black body law
     """
     
-    B_nu = ((2*h)/cl**2) * nu**3 * ( (1 / (np.exp((h*nu)/(k*Te)) - 1 ))) 
-    print(B_nu)
-    
+    B_nu = ((2*h)/cl**2) * nu**3 *  (1 / (np.exp((h*nu)/(k*Te)) - 1 )) 
+    #print(B_nu)
     
     plt.plot(nu, B_nu)
     
     setFigureParameters(r"$B_\nu$".format(kTe)
-                        ,r'$\alpha_\nu(\nu,\theta)$',r'$\nu$',5e3,5e10,nu[0],nu[-1])      
-    
-    
+                        ,r'$B_\nu(\theta)$',r'$\nu$',5e3,5e10,nu[0],nu[-1])      
     
     return B_nu
+
+
+def alpha_nu_theta(B, p, nuL, Ub, theta, K2):
+    """
+    Synchrotron self absorption
+    """
+    
+    J = J_nu_theta(B, p, nuL, Ub, theta, K2)
+    B = B_nu(theta)
+    
+    alpha = J / B
+
+    plt.plot(nu, B, label = r'$B_\nu(\theta)$')
+
+    plt.plot(nu, J, label = r'$J_\nu(\nu,\theta)$')
+
+    plt.plot(nu, alpha,label=r'$\alpha_\nu(\nu,\theta)$')
+    
+    #setFigureParameters(r"Tracé de l'absorption synchrotron $\alpha_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à {:} keV".format(kTe)
+    #                    ,r'$\alpha_\nu(\nu,\theta)$',r'$\nu$',5e-5,5e30,nu[0],nu[-1])      
+    
+    setFigureParameters(r"Tracés de $J_\nu(\nu,\theta)$, $B_\nu(\theta)$ et $\alpha_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à {:} keV".format(kTe)
+                        ,r'$f_\nu(\nu,\theta)$',r'$\nu$',5e-3,5e7,nu[0],nu[-1])      
+    
+    print(J)
+
+    #print(alpha)
+    return alpha 
+
+
+def f(I, t, j, alpha):
+    
+    return cl * (j - alpha*I)
+    
+
+def init_planckian(Tp):
+    """
+    initialization of the photons distribution with a planckian profile
+    """
+    
+    u0 = (1 /  (np.exp((h*nu)/(k*Te)) - 1 ))
+    return u0
+
+def solveTransfertEq(B, p, nuL, Ub, theta, K2):
+    
+    j = J_nu_theta(B, p, nuL, Ub, theta, K2)
+    alpha = j / B_nu(theta)
+        
+    t = np.linspace(0,10,100)
+
+    I0 = init_planckian(Te)
+    I = odeint(f,I0,t, args = (j, alpha))
+
+
+    print(I)
+
+    plt.plot(t,I)
+    setFigureParameters(r"Evolution de l'intensité spécifique de l'émission synchrotron pour un gaz d'électrons chauffé à {:} keV".format(kTe)
+                        ,r'$I_\nu(t)$',r'$t$',5e0,5e30,0,10)      
 
 #######################################################################
 ###################  TEST FUNCTIONS  #############################
@@ -252,7 +300,7 @@ def synch():
 
     generNu()
     
-    B=1e10
+    B=1e3
     p = np.linspace(1e-3, 1e1, 100)
     
     nuL, Ub, theta, K2 = setParameters(B)
@@ -269,6 +317,8 @@ def synch():
     """    
     #testJ_nu_theta(B, p, nuL, Ub, theta, K2)
     #J_nu_theta(B, p, nuL, Ub, theta, K2)
-    alpha_nu_theta(B, p, nuL, Ub, theta, K2)
+    #alpha_nu_theta(B, p, nuL, Ub, theta, K2)
+    solveTransfertEq(B, p, nuL, Ub, theta, K2)
+    
     
 synch()
