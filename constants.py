@@ -13,16 +13,16 @@ import numpy as np
 k = 1.381e-23
 # Planck constant
 h = 6.626e-34
-# Temperature of the electron field (K)
+# Temperature of the electron field
 # kTe in keV 
-kTe = 100.
+kTe = 100
 # Te in K
 Te = kTe * 1.602e-16 / k
 cl = 3e8
 # Thompson scattering cross section
 sT = 6.652e-29
 # Electron number density (in m^-3)
-Ne = 1e23
+Ne = 1e24
 # Electron mass (in kg)
 me = 9.109e-31
 # Electron charge (in C)
@@ -32,6 +32,9 @@ mu0 = np.pi*4e-7
 
 
 # Photon temperature
-kTp = 2.
+kTp = 2e-2
 Tp = kTp * 1.602e-16 / k
+# Magnetic field (in T)
+B=1e3
+
     
