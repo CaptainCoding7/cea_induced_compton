@@ -13,16 +13,9 @@ import numpy as np
 k = 1.381e-23
 # Planck constant
 h = 6.626e-34
-# Temperature of the electron field
-# kTe in keV 
-kTe = 100
-# Te in K
-Te = kTe * 1.602e-16 / k
 cl = 3e8
 # Thompson scattering cross section
 sT = 6.652e-29
-# Electron number density (in m^-3)
-Ne = 1e24
 # Electron mass (in kg)
 me = 9.109e-31
 # Electron charge (in C)
@@ -31,10 +24,27 @@ qe = 1.602e-19
 mu0 = np.pi*4e-7
 
 
-# Photon temperature
-kTp = 2e-2
-Tp = kTp * 1.602e-16 / k
+#################  PARAMETERS  #################
+
+# Schwarzschild radius (Rs = 5e7 cm )
+Rcgs = 5e7
+R = Rcgs * 1e-2
+# Thompson optical depth
+pT = 2.4
+# Electron number density (in m^-3)
+Ne = pT / R / sT
+# Temperature of the electron field
+# kTe in keV 
+kTe = 80
+# Te in K
+Te = kTe * 1.602e-16 / k
 # Magnetic field (in T)
-B=1e3
+Bcgs=1e5
+B=Bcgs*1e-4
+
+# Photon temperature (used to initialize the planckian photon distribution)
+kTp = 2
+Tp = kTp * 1.602e-16 / k
+
 
     

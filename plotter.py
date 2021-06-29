@@ -15,7 +15,7 @@ def setFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
     # Reglages affichage
     plt.xscale('log')
     plt.yscale('log')
-    leg = plt.legend(loc="upper right",prop={'size': 7}, bbox_to_anchor=[1, 1],
+    leg = plt.legend(loc="upper left",prop={'size': 7}, bbox_to_anchor=[0, 1],
                      ncol=1, shadow=True, title="Legend", fancybox=True)
     leg.get_title().set_color("black")
     plt.title(title)
@@ -97,14 +97,15 @@ def plotDensity(phoDensTh, uobs, tobs, f_photons, e_photons):
     setFigureParameters('','Photon Number Density $ (nbPhotons . m^{-3} . keV^{-1})$','Energy (keV)',1e20,1e30,1e-4,1e3)
 
 
-def plotIntensity(iTh, uobs,tobs, e_photons, f_photons):
+def plotIntensity(iTh, uobs, tobs, e_photons, f_photons,
+                  titre, ylab,xlab,ymin,sup,xmin,xsup):
     """
     plot the sepctral radiance (intensité specifique) as a function of the energy
     """
     col = [ cm.jet(x) for x in np.linspace(0, 0.3 , len(tobs))]
     
     # ANALYTICAL SOLUTION
-    plt.plot(e_photons, iTh, "+", color='red',label='theoritical solution')
+    #plt.plot(e_photons, iTh, "+", color='red',label='th solution (no Synchrotron)')
     
     # plot the intensity of the initial photon field
     intensity = ((2*h)/cl**2) * (uobs[0]*f_photons**3)
@@ -115,7 +116,38 @@ def plotIntensity(iTh, uobs,tobs, e_photons, f_photons):
         intensity = ((2*h)/cl**2) * (uobs[i+1]*f_photons**3) 
         plt.plot(e_photons, intensity, color = col[i],label='t={:.1E}s'.format(tt))    
 
-    setFigureParameters('','Spectral Radiance $(keV.m^{-2}.s^{-1}.Hz^{-1}.str^{-1})$','Energy (keV)',1e-1,5e7,1e-4,1e3)
+    setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
+
+
+def plotIntensityAll(Jnu,Bnu, uobsS, uobsC, uobs, tobs, e_photons, f_photons,
+                  titre, ylab,xlab,ymin,sup,xmin,xsup):
+    """
+    plot the sepctral radiance (intensité specifique) as a function of the energy
+    """
+    col = [ cm.jet(x) for x in np.linspace(0, 0.3 , len(tobs))]
+    
+    # Synchrotron emission
+    #plt.plot(e_photons, Jnu, color='green',label='Synchrotron emission')
+
+    # Blackbody emission
+    plt.plot(e_photons,Bnu, color='black',label='Blackbody emission')
+    
+    # plot the intensity of the initial photon field
+    intensity = ((2*h)/cl**2) * (uobs[0]*f_photons**3)
+    plt.plot(e_photons, intensity, color = 'purple',label='t=0s')
+
+    for i,tt in enumerate(tobs):
+        # plot the intensity of the photon field
+        intensity = ((2*h)/cl**2) * (uobs[i+1]*f_photons**3) 
+        plt.plot(e_photons, intensity, color = col[i],label='t={:.1E}s'.format(tt))    
+        # compton only
+        intensityC = ((2*h)/cl**2) * (uobsC[i+1]*f_photons**3) 
+        plt.plot(e_photons, intensityC, color = 'orange',label='Compton scattering')   
+        # Synchrotron only
+        intensityS = ((2*h)/cl**2) * (uobsS*f_photons**3) 
+        plt.plot(e_photons, intensityS, color='red',label='Synchrotron radiation')
+        
+    setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 
 
 

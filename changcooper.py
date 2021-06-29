@@ -44,16 +44,25 @@ def tridag(a, b, c, r):
     return u
 
 
-def changCooper(A, C, xa, dxa, dxb, N, u, pech, Q, dT):
+def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
     """
     solve the equation with the chang-cooper scheme
+    we store in uobs the solutions corresponding to the instants
+    contained in tobs
     """
     
-    #print(dT)
-    
-    #dT=dt
 
-    for n in range(N-1):
+    # the vector containing the solution corresponding to the instants
+    # in tobs, the instants for which we want to plot the solution
+    uobs = np.empty([len(tobs)+1,M])
+    
+    # we add systematically the initial distribution in the solution vector
+    uobs[0] = u
+    
+    # the number of calculus steps
+    N=int(tobs[-1]/dt)
+    
+    for n in range(N+1):
         
        #we redefine B as it depends on u    
         B = 0.5*(xa[1:]**4+xa[:-1]**4) * (u[1:]+1) # sur les bords      (M-1)
@@ -69,41 +78,60 @@ def changCooper(A, C, xa, dxa, dxb, N, u, pech, Q, dT):
         # sur-diagonale (taille M-1)
         c = 1/A[:-1]/dxa[:-1] * C/dxb * Wp
     
+    
         # diagonale (taille M)
         b = np.zeros_like(xa)
-        b[0]    = 1/dT + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] ) + pech[0]
-        b[1:-1] = 1/dT + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] ) + pech[1:-1]
-        b[-1]   = 1/dT + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 ) + pech[-1]
+        
+        if(np.all(T)==0):
+            b[0]    = 1/dT + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] )
+            b[1:-1] = 1/dT + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] )
+            b[-1]   = 1/dT + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 )
+        else:   
+            b[0]    = 1/dT + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] ) + 1/T[0]
+            b[1:-1] = 1/dT + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] ) + 1/T[1:-1]
+            b[-1]   = 1/dT + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 ) + 1/T[-1]
         
         r = Q + u/dT
                 
+        # the current solution
         u = tridag(-a,b,-c,r)
+        
+        # the instant corrsponding to the current solution
+        t=n*dt
+        
+        # if this instant corresponds to one of those contained in tobs,
+        # we add this solution in uobs
+        for i in range(len(tobs)):
+            ti = tobs[i]
+            if(t == ti):
+                #print("t=",t)
+                #print("tobs=",ti)
+                uobs[i+1] = u
         
         #print("---- u = ",u)
             
-    return u
+    return uobs
 
 
-def changCooper2(xa, N, u, pech, Q, dT):
+def changCooper2(xb, N, u, T, Q, dT):
     """
     solve the equation with a simplified chang-cooper scheme
-    (A, B, C parameters are null in the original equation)
+    (A, B, C parameters of the original equation are null)
     """
 
     for n in range(N-1):
               
         # sous-diagonale (taille M-1)
-        a = np.zeros(len(xa)-1)
+        a = np.zeros(len(xb)-2)
     
         # sur-diagonale (taille M-1)
-        c = np.zeros(len(xa)-1)
+        c = np.zeros(len(xb)-2)
     
         # diagonale (taille M)
-        b = np.zeros_like(xa)
-        b[0]    = 1/dT + pech[0]
-        b[1:-1] = 1/dT + pech[1:-1]
-        b[-1]   = 1/dT + pech[-1]
-        
+        b = np.zeros(len(xb)-1)
+        b[0]    = 1/dT + 1/T[0]
+        b[1:-1] = 1/dT + 1/T[1:-1]
+        b[-1]   = 1/dT + 1/T[-1]
         r = Q + u/dT
                 
         u = tridag(-a,b,-c,r)
