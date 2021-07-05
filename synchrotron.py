@@ -105,7 +105,7 @@ def J_nu_theta(nu, M, B, p, nuL, Ub, theta, K2):
 
     # for each frequency, evaluate J, the integral of j(nu,p)*f(p,theta) over p
     # as we can't take inf for the sup limit, we choose a mulitple of the characteristics border of the spectrum
-    sup = 10*np.sqrt(theta *(1+theta))
+    sup = 100*np.sqrt(theta *(1+theta))
     for i,nuu in enumerate(nu[:-1]):
         J_theta[i], err = quad(jManuol,0, sup, args=(nuu, Ub, nuL, K2, theta))
         
@@ -124,6 +124,7 @@ def B_nu(nu, theta):
     
     #B_nu = ((2*h)/cl**2) * nu**3 *  (1 / (np.exp((h*nu)/(k*Te)) - 1 )) 
     a = h*nu/k/Te
+    """
     Bnu = np.zeros(len(nu))
     for i in range(len(nu)):
         
@@ -131,7 +132,7 @@ def B_nu(nu, theta):
             Bnu[i] = ((2*h)/cl**2) * nu[i]**3 *  (np.exp(-a[i]) / (1 - np.exp(-a[i])))
         else:
             Bnu[i] = ((2*h)/cl**2) * nu[i]**2 *  k * Te
-
+"""
     
     #plt.plot(nu, B_nu)
     # reshaping of the expression to avoid overflows
@@ -140,138 +141,6 @@ def B_nu(nu, theta):
     #setFigureParameters(r"$B_\nu$".format(kTe)
      #                   ,r'$B_\nu(\theta)$',r'$\nu$',5e3,5e10,nu[0],nu[-1])      
     
-    return Bnu[:-1]
+    return Bnu
 
 
-def alpha_nu_theta(Jnu, Bnu):
-    """
-    Synchrotron self absorption
-    """
-    
-    alpha = Jnu / Bnu
-    
-    """
-    plt.plot(nu[1:], B, label = r'$B_\nu(\theta)$')
-
-    plt.plot(nu[1:], J, label = r'$J_\nu(\nu,\theta)$')
-
-    plt.plot(nu[1:], alpha,label=r'$\alpha_\nu(\nu,\theta)$')
-    
-    #setFigureParameters(r"Tracé de l'absorption synchrotron $\alpha_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à {:} keV".format(kTe)
-    #                    ,r'$\alpha_\nu(\nu,\theta)$',r'$\nu$',5e-5,5e30,nu[0],nu[-1])      
-    
-    setFigureParameters(r"Tracés de $J_\nu(\nu,\theta)$, $B_\nu(\theta)$ et $\alpha_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à {:} keV".format(kTe)
-                        ,r'$f_\nu(\nu,\theta)$',r'$\nu$',5e-3,5e7,nu[0],nu[-1])      
-    """
-    
-    #print(alpha)
-    return alpha 
-
-
-def meshGeneration():
-    """
-    generation of the time and frequency meshes
-    """
-    
-    #########################  MESH GENERATION  #######################
-    
-    #### time mesh  ################################
-    
-    to = ((k*Te) / (me*cl**2)) * Ne * cl * sT
-    #to = cl / R
-
-    # observation instants
-    # the last instant is taken as the max time in the simulation
-    tobs = [1e-7, 3e-7, 4e-7]
-    tobs = [3e-9] # stabilité atteinte    
-    
-    tmax = tobs[-1]
-    
-    dt=1e-10
-    dto = dt
-    dto =  to * dt
-    #print("dt;dto: ",dt,dto)
-    N=int(tmax/dt)
-    
-    #### frequency mesh  ################################
-
-    M=100
-    numin=1e12
-    numax=1e21
-    #valeurs au bords des bins (M+1 valeurs)
-    nu = np.logspace(np.log10(numin),np.log10(numax),M+1)
-    
-    return nu, tobs,tmax,dt,dto, M
-
-
-def solveTransfertEq(nu,tobs,tmax,dt,dto,M,B, p, nuL, Ub, theta, K2):
-    """
-    solve the Transfert equation with the chang-cooper scheme
-    call on of the plotting function
-    """
-        
-    j = J_nu_theta(nu, M, B, p, nuL, Ub, theta, K2)
-    # as the first values of j are 0, we give random values to avoid zero divisions
-    #j[0:12] = 1e-3
-    Bnu = B_nu(nu, theta)
-    alpha = j / Bnu
-    
-    ################# TRANSFERT EQUATION  PARAMETERS  #################
-    # we use the chang-cooper scheme without taking account of the A,B,C vectors
-    
-    # emission term
-    emSyn = cl*j
-    
-    # absorption term
-    absSyn = 1/cl/alpha
-    
-    # photons injection at 0.5 keV, gaussian width of 0.03keV
-    xinj = 1e14
-    width = 1e2
-    I0=init_gaussian(nu, xinj, width)
-    epho = nu * h / 1.602e-16
-    #I0 = init_planckian(epho[1:])
-    
-    # find the solution of the transfert equation with the cc scheme for each instant
-    # specified in tobs
-    N=int(tobs[-1]/dt)
-    I = cc.changCooper2(nu, N, I0,absSyn, emSyn, dt)
-
-    #t=np.logspace(np.log10(1e-14),np.log10(1e-10),100)
-    t = tobs[-1]
-    Ith = I0 * np.exp(-cl*alpha*t) + Bnu*(1-np.exp(-cl*alpha*t))
-    #print(alpha)
-    
-    intensity = ((2*h)/cl**2) * (I*nu[1:]**3) 
-
-    plt.plot(nu[1:],Ith, '+', label = 'Ith')
-    plt.plot(nu[1:],I0, label = 'I0')
-    plt.plot(nu[1:],I, label = 'I_nu')
-    plt.plot(nu[1:],Bnu, label = 'B_nu')
-    setFigureParameters(r"Intensité spécifique de l'émission synchrotron pour un gaz d'électrons chauffé à {:} keV".format(kTe)
-                        ,r'$I_\nu(t)$',r'$\nu$',1e-6,1e4,nu[0],nu[-1])      
-    
-    return I
-
-def synch():
-        
-    p, nuL, Ub, theta, K2 = setParameters(B)
-
-    
-    #plotfp(p, B, K2, theta)
-    #testPs(nu,nuL)
-    # tests pour différentes valeurs de p (le même pour tous les électrons)
-    """
-    p = [1e-2, 1.e-1, 1, 1.e1, 5e1]
-    for pp in p:
-        print("\n******  p = {:.1E}".format(pp))
-        testj_same_p(pp, Ub, nuL)
-    """    
-    #testJ_nu_theta(B, p, nuL, Ub, theta, K2)
-    #J_nu_theta(B, p, nuL, Ub, theta, K2)
-    
-    nu,tobs,tmax,dt,dto, M = meshGeneration()
-    #alpha_nu_theta(B, p, nuL, Ub, theta, K2)
-    
-    solveTransfertEq(nu, tobs, tmax, dt, dto, M, B, p, nuL, Ub, theta, K2)    
-    

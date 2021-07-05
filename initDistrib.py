@@ -10,7 +10,7 @@ from scipy.stats import norm
 from scipy.signal import unit_impulse
 from constants import Tp, kTp
 
-def init_gaussian(xb,xinj, width):
+def init_gaussian(xa,xb,xinj, width):
     """
     initialization of the photons distribution with a gaussian profile
     """
@@ -19,7 +19,7 @@ def init_gaussian(xb,xinj, width):
     iinj = np.argwhere(xb<xinj)[-1]
     # on recentre xinj sur le bin en question
     xinj = xb[iinj]
-    u0 = norm.pdf(xb[1:] , loc = xinj , scale = width )
+    u0 = norm.pdf(xa , loc = xinj , scale = width )
     
     return u0
 

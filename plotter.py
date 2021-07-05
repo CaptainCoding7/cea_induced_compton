@@ -119,35 +119,33 @@ def plotIntensity(iTh, uobs, tobs, e_photons, f_photons,
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 
 
-def plotIntensityAll(Jnu,Bnu, uobsS, uobsC, uobs, tobs, e_photons, f_photons,
+def plotAll(Bnu, nuLs, nuLc, nuL, tobs, e_pho, nu,
                   titre, ylab,xlab,ymin,sup,xmin,xsup):
     """
     plot the sepctral radiance (intensité specifique) as a function of the energy
     """
     col = [ cm.jet(x) for x in np.linspace(0, 0.3 , len(tobs))]
     
-    # Synchrotron emission
-    #plt.plot(e_photons, Jnu, color='green',label='Synchrotron emission')
+    # Synchrotron only
+    plt.plot(e_pho, nuLs, color='red',label='Synchrotron radiation')
+
+    # compton only
+    #plt.plot(e_pho, nuLc, color = 'orange',label='Compton scattering')   
 
     # Blackbody emission
-    plt.plot(e_photons,Bnu, color='black',label='Blackbody emission')
+    #plt.plot(e_pho,Bnu, color='black',label='Blackbody emission')
     
     # plot the intensity of the initial photon field
-    intensity = ((2*h)/cl**2) * (uobs[0]*f_photons**3)
-    plt.plot(e_photons, intensity, color = 'purple',label='t=0s')
+    plt.plot(e_pho, nuL[0], color = 'purple',label='t=0s')
 
     for i,tt in enumerate(tobs):
         # plot the intensity of the photon field
-        intensity = ((2*h)/cl**2) * (uobs[i+1]*f_photons**3) 
-        plt.plot(e_photons, intensity, color = col[i],label='t={:.1E}s'.format(tt))    
-        # compton only
-        intensityC = ((2*h)/cl**2) * (uobsC[i+1]*f_photons**3) 
-        plt.plot(e_photons, intensityC, color = 'orange',label='Compton scattering')   
-        # Synchrotron only
-        intensityS = ((2*h)/cl**2) * (uobsS*f_photons**3) 
-        plt.plot(e_photons, intensityS, color='red',label='Synchrotron radiation')
+        plt.plot(e_pho, nuL[i+1], color = col[i],label='t={:.1E}s'.format(tt))    
         
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
+
+
+
 
 
 

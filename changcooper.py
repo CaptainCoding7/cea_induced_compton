@@ -50,7 +50,6 @@ def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
     we store in uobs the solutions corresponding to the instants
     contained in tobs
     """
-    
 
     # the vector containing the solution corresponding to the instants
     # in tobs, the instants for which we want to plot the solution
@@ -64,8 +63,9 @@ def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
     
     for n in range(N+1):
         
-       #we redefine B as it depends on u    
-        B = 0.5*(xa[1:]**4+xa[:-1]**4) * (u[1:]+1) # sur les bords      (M-1)
+       #we redefine B as it depends on u
+       # depends on the equation; has to be redefine specifically for the equation
+        B = 0.5*(xa[1:]**4+xa[:-1]**4) * (0.5*(u[1:]+u[:-1])+1) 
         w = (B/C)*dxb
         lwl = np.abs(w)
         W = lwl * np.exp(-lwl)/(1.0-np.exp(-lwl))
@@ -110,7 +110,7 @@ def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
         
         #print("---- u = ",u)
             
-    return uobs
+    return uobs, a, b, c, r
 
 
 def changCooper2(xb, N, u, T, Q, dT):
