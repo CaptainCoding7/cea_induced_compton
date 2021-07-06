@@ -10,7 +10,8 @@ Created on Thu Jun  3 13:44:28 2021
 import numpy as np
 import matplotlib.pyplot as plt
 
-from constants import k,h,Te,cl,sT,Ne,me,kTe, B, Bcgs, R, Rcgs
+from constants import k,h,Te,cl,sT,Ne,me,kTe, B, Bcgs, R, Rcgs, pT
+import constants as cst
 import changcooper as cc
 from plotter import plotIntensity
 from plotter import plotAll
@@ -54,7 +55,7 @@ def meshGeneration():
     
     #### "energy" mesh  ################################
 
-    M=100
+    M=300
     
     # the energy carried by the photons (keV)
     emin = 5e-6
@@ -141,7 +142,7 @@ def showDensities(uobs, xa, dxa):
     
     return Ndens0, Ndens
 
-def computeLum(u, nu, p_nu):
+def computeLum(u, nu):
     
     # intensité specifique
     I_nu = 2*h/cl**2 * u*nu**3 
@@ -150,8 +151,8 @@ def computeLum(u, nu, p_nu):
     u_nu = 4 * np.pi / cl * I_nu
     # volume de la source
     V = 4/3 * np.pi * R**3
-    # temps moyen d'échappement
-    T_nu = R/cl/p_nu
+    # temps d'échappement T_nu = R / c
+    T_nu = R/cl
     # énergie total de la source
     E_nu = V*u_nu
     # luminosité de la source
@@ -194,12 +195,13 @@ def solveKompaneets(xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu):
     #intensityTh = ((2*h)/cl**2) * f_photons[1:]**3 * ( (1 /  (C*np.exp((h*f_photons[1:])/(k*Te)) - 1 ))) 
      
     # synchrotron contribution ==> au regime stable du/dto = 0
-    uS = Q / (1 + pOpt)
-
+    uS = Q / (pOpt - pech)
+    uS = (Q - pOpt*ueq)
+    
     #compton contribution
     m = np.diag(-a, -1) + np.diag(b, 0) + np.diag(-c, 1)
-    I = np.identity(len(m))+np.identity(len(m))+np.identity(len(m))
-    m = (I - m)/dto + np.diag(pOpt) + pech*I
+    I = np.identity(len(m))
+    m = I/dto - m + np.diag(pOpt+pech)
     #m = (m-I)/dto - pOpt - pech*I
     #uC = ueq * m[50]
     uC = np.matmul(m, ueq)
@@ -207,25 +209,39 @@ def solveKompaneets(xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu):
     
     toErg = 1e7
     
-    L = np.empty([len(tobs)+1,M])
-    I = np.empty([len(tobs)+1,M])
-    for i in range(len(u)):
-        I[i],L[i] = computeLum(u[i]*toErg,nu, pech)
-    Is, Ls = computeLum(uS*toErg, nu, pech)
-    Ic, Lc = computeLum(uC*toErg, nu, pech)
+
+    I,L = computeLum(pech*ueq*toErg, nu)
+    # as the compton and synchrotron contributions are not linked 
+    # with the escape probability, we use pech = 1
+    Is, Ls = computeLum(uS*toErg, nu)
+    Ic, Lc = computeLum(uC*toErg, nu)
+    
+    L_Bnu = 4 * np.pi**2 * R**2  * Bnu * toErg
+    
+    plotAll(nu*L_Bnu, nu*Ls, nu*Lc, nu*L, tobs, e_pho, nu,
+                  r'Spectre de la couronne (boule ; B = {:.0E} G, kT = {:} keV, R = {:.0E} cm, $\tau_p$ = {:.2E})'.format(Bcgs,kTe,Rcgs,pT),
+                  r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',1e28,5e33,1e-5,1e4)
+    """
+    compareBELM(nu*L_Bnu,nu*Ls, nu*Lc, nu*L, tobs, e_pho, nu,
+                 r'Spectre de la couronne (boule ; B = {:.0E} G, kT = {:} keV, R = {:.0E} cm, $tau_p$ = {:.2E})'.format(Bcgs,kTe,Rcgs,pT),
+                  r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',1e28,5e33,1e-5,1e4)
+    """
+#def mainKompaneets(r,b,kT,pt):
+def mainKompaneets():
     
     """
-    plotAll(Bnu, nu*Ls, nu*Lc, nu*L, tobs, e_pho, nu,
-                  'Spectre de la couronne (boule ; B = {:.0E} G, kT = {:} keV, R = {:.0E} cm)'.format(Bcgs,kTe,Rcgs),
-                  r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',1e28,5e32,1e-5,1e4)
-    """
-    L_Bnu = 4 * np.pi**2 * R**2  * Bnu * toErg
-    compareBELM(nu*L_Bnu,nu*Ls, nu*Lc, nu*L, tobs, e_pho, nu,
-                 'Spectre de la couronne (boule ; B = {:.0E} G, kT = {:} keV, R = {:.0E} cm)'.format(Bcgs,kTe,Rcgs),
-                  r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',1e28,5e38,1e-10,1e4)
+    cst.Rcgs = r
+    cst.R = cst.Rcgs*1e-2
+    cst.Bcgs = b
+    cst.B = cst.B * 1e-4
+    cst.kTe = kT
+    cst.Te = cst.kTe * 1.602e-16 / cst.k
+    cst.pT = pt
+    cst.Ne = cst.pT / cst.R / cst.sT
 
-
-def mainKompaneets():
+    from constants import k,h,Te,cl,sT,Ne,me,kTe, B, Bcgs, R, Rcgs
+    global k,h,Te,cl,sT,Ne,me,kTe, B, Bcgs, R, Rcgs
+"""
     
     xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu = meshGeneration()
 
