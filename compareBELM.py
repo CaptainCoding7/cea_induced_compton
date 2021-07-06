@@ -11,7 +11,7 @@ from matplotlib import cm
 from plotter import setFigureParameters
 
 
-def plotBELM(nuLB, nuLs, synchB, nuLc, compB, nuL, spectrumB, tobs, e_pho, eB,
+def plotBELM(nuLB, nuLs, synchB, nuLc, compB, nuLeq, spectrumB, tobs, e_pho, eB,
                   titre, ylab,xlab,ymin,sup,xmin,xsup):
     """
     plot the sepctral radiance (intensité specifique) as a function of the energy
@@ -21,17 +21,25 @@ def plotBELM(nuLB, nuLs, synchB, nuLc, compB, nuL, spectrumB, tobs, e_pho, eB,
     # Synchrotron only
     plt.plot(e_pho, nuLs, color='blue',label='Synchrotron')
 
+    """
+    nuLcNeg = np.empty_like(nuLc)
+    for i,u in enumerate(nuLc):
+        if u<0:
+            nuLcNeg[i]=-u
+            
     # Compton only
+    plt.plot(e_pho, nuLcNeg, '--', color='orange',label='Negative Compton')
+"""
     plt.plot(e_pho, nuLc, color='orange',label='Compton')
 
     # BELM Synchrotron 
     plt.plot(eB, synchB, color='purple',label='BELM Synchrotron ')
 
     # BELM compton
-    plt.plot(eB, compB, color = 'red',label=' BELM Compton')   
+    plt.plot(eB, compB, color = 'red',label='BELM Compton')   
 
     # BELM Spectra
-    plt.plot(eB, spectrumB, color = 'darkblue',label=' BELM Spectrum')   
+    plt.plot(eB, spectrumB, color = 'darkblue',label='BELM Spectrum')   
 
     # Blackbody emission
     plt.plot(e_pho,nuLB, color='black',label='Blackbody emission')
@@ -39,14 +47,12 @@ def plotBELM(nuLB, nuLs, synchB, nuLc, compB, nuL, spectrumB, tobs, e_pho, eB,
     # plot the intensity of the initial photon field
     #plt.plot(e_pho, nuL[0], color = 'black',label='t=0s')
 
-    for i,tt in enumerate(tobs):
-        # plot the intensity of the photon field
-        plt.plot(e_pho, nuL[i+1], color = 'green',label='t={:.1E}s'.format(tt))    
+    plt.plot(e_pho, nuLeq, color = 'green',label='Equilibrium spectrum')    
         
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 
 
-def plotBELMnoCompton(nuLB, nuLs, synchB, nuL, spectrumB, tobs, e_pho, eB,
+def plotBELMnoCompton(nuLB, nuLs, synchB, nuLeq, spectrumB, tobs, e_pho, eB,
                   titre, ylab,xlab,ymin,sup,xmin,xsup):
     """
     plot the sepctral radiance (intensité specifique) as a function of the energy
@@ -60,7 +66,7 @@ def plotBELMnoCompton(nuLB, nuLs, synchB, nuL, spectrumB, tobs, e_pho, eB,
     plt.plot(eB, synchB, color='purple',label='BELM Synchrotron ')
 
     # BELM Spectra
-    plt.plot(eB, spectrumB, color = 'darkblue',label=' BELM Spectrum')   
+    plt.plot(eB, spectrumB, color = 'darkblue',label='BELM Spectrum')   
 
     # Blackbody emission
     plt.plot(e_pho,nuLB, color='black',label='Blackbody emission')
@@ -68,10 +74,9 @@ def plotBELMnoCompton(nuLB, nuLs, synchB, nuL, spectrumB, tobs, e_pho, eB,
     # plot the intensity of the initial photon field
     #plt.plot(e_pho, nuL[0], color = 'black',label='t=0s')
 
-    for i,tt in enumerate(tobs):
-        # plot the intensity of the photon field
-        plt.plot(e_pho, nuL[i+1], color = 'green',label='t={:.1E}s'.format(tt))    
-        print()
+    # equilibrium spectrum
+    plt.plot(e_pho, nuLeq, color = 'green',label='Equilibrium spectrum')    
+
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
     
     
@@ -83,13 +88,16 @@ def compareBELM(nuLB,nuLs,nuLc,nuL,tobs,e_pho,nu,
     BELM model
     """
     
+    firstline=41
+    lastline=552
+    nblines=512
     datafile = open("spectra.txt")
-    lines_to_read = np.linspace(41,296,256)
-    lines = np.empty((256,9))
-    eB = np.empty(256)
-    spectrumB = np.empty(256)
-    compB = np.empty(256)
-    synchB = np.empty(256)
+    lines_to_read = np.linspace(firstline,lastline,nblines)
+    lines = np.empty((nblines,9))
+    eB = np.empty(nblines)
+    spectrumB = np.empty(nblines)
+    synchB = np.empty(nblines)
+    compB = np.empty(nblines)
 
 
     for i, line in enumerate(datafile):
@@ -110,7 +118,7 @@ def compareBELM(nuLB,nuLs,nuLc,nuL,tobs,e_pho,nu,
     plotBELM(nuLB,nuLs, synchB, nuLc, compB, nuL, spectrumB, tobs, e_pho, eB, 
              titre, ylab, xlab, ymin, sup, xmin, xsup)
     
-def compareBELMnoCompton(nuLB,nuLs,nuL,tobs,e_pho,nu,
+def compareBELMnoCompton(nuLB,nuLs,nuLc,nuL,tobs,e_pho,nu,
                 titre, ylab,xlab,ymin,sup,xmin,xsup):
 
     """
@@ -118,8 +126,8 @@ def compareBELMnoCompton(nuLB,nuLs,nuL,tobs,e_pho,nu,
     BELM model
     """
     firstline=41
-    lastline=224
-    nblines=184
+    lastline=552
+    nblines=512
     datafile = open("synch_escape.txt")
     lines_to_read = np.linspace(firstline,lastline,nblines)
     lines = np.empty((nblines,7))

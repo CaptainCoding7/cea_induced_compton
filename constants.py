@@ -30,7 +30,7 @@ mu0 = np.pi*4e-7
 Rcgs = 5e7
 R = Rcgs * 1e-2
 # Thompson optical depth
-pT = 2.4
+pT = 2.36
 # Electron number density (in m^-3)
 Ne = pT / R / sT
 # Temperature of the electron field

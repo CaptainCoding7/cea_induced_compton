@@ -16,7 +16,7 @@ def setFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
     plt.xscale('log')
     plt.yscale('log')
     leg = plt.legend(loc="upper left",prop={'size': 7}, bbox_to_anchor=[0, 1],
-                     ncol=1, shadow=True, title="Legend", fancybox=True)
+                     ncol=2, shadow=True, title="Legend", fancybox=True)
     leg.get_title().set_color("black")
     plt.title(title)
     plt.ylim(ymin,ymax)
@@ -119,7 +119,7 @@ def plotIntensity(iTh, uobs, tobs, e_photons, f_photons,
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 
 
-def plotAll(Bnu, nuLs, nuLc, nuL, tobs, e_pho, nu,
+def plotAll(L_Bnu, nuLs, nuLc, nuLeq, tobs, e_pho, nu,
                   titre, ylab,xlab,ymin,sup,xmin,xsup):
     """
     plot the sepctral radiance (intensité specifique) as a function of the energy
@@ -127,20 +127,33 @@ def plotAll(Bnu, nuLs, nuLc, nuL, tobs, e_pho, nu,
     col = [ cm.jet(x) for x in np.linspace(0, 0.3 , len(tobs))]
     
     # Synchrotron only
-    plt.plot(e_pho, nuLs, color='red',label='Synchrotron radiation')
+      
+    nuLsNeg = np.empty_like(nuLs)
+    for i,u in enumerate(nuLs):
+        if u<0:
+            nuLsNeg[i]=-u
 
-    # compton only
-    #plt.plot(e_pho, nuLc, color = 'orange',label='Compton scattering')   
+    plt.plot(e_pho, nuLsNeg, '--', color='red',label='Negative synch')            
+    plt.plot(e_pho, nuLs, color='red',label='Synchrotron contribution')
+    
+    # Compton only
+    
+    nuLcNeg = np.empty_like(nuLc)
+    for i,u in enumerate(nuLc):
+        if u<0:
+            nuLcNeg[i]=-u
+
+    plt.plot(e_pho, nuLcNeg, '--', color='orange',label='Negative Compton')            
+    plt.plot(e_pho, nuLc, color='orange',label='Compton contribution')
+    
 
     # Blackbody emission
-    #plt.plot(e_pho,Bnu, color='black',label='Blackbody emission')
+    plt.plot(e_pho,L_Bnu, color='black',label='Blackbody emission')
     
     # plot the intensity of the initial photon field
-    plt.plot(e_pho, nuL[0], color = 'purple',label='t=0s')
+    #plt.plot(e_pho, nuL[0], color = 'purple',label='t=0s')
 
-    for i,tt in enumerate(tobs):
-        # plot the intensity of the photon field
-        plt.plot(e_pho, nuL[i+1], color = col[i],label='t={:.1E}s'.format(tt))    
+    plt.plot(e_pho, nuLeq, color = 'green',label='Equilibrium spectrum')    
         
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 
