@@ -177,34 +177,42 @@ def solveKompaneets(xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu):
     #------------------------------------------------------------------------#
     dtoinv=1/dto
     #dtoinv=0
-    u, a, b, c, r = cc.changCooper(A, C, T, Q, xa, dxa, dxb, u0, M, tobs, dt, dto) #
+    # with the induced compton effect:
+    u_ind, a, b, c, r = cc.changCooper(A, C, T, Q, xa, dxa, dxb, u0, M, tobs, dt, dto, True) #
+    # without the induced compton effect
+    u, a, b, c, r = cc.changCooper(A, C, T, Q, xa, dxa, dxb, u0, M, tobs, dt, dto, False) #
+    u_ind_eq = u_ind[-1]
     ueq = u[-1]
     #------------------------------------------------------------------------#
 
     # the initial and final densities of the photons distribution
     Ndens0, Ndens = showDensities(u, xa, dxa)    
+    
+    ### The compton and synchrotron contribution are calculated for the 
+    #   solution found with the induced compton effect
 
     # synchrotron contribution ==> au regime stable du/dto = 0
     uS = Q / (pOpt - pech)
-    uS = (Q - pOpt*ueq)
+    uS = (Q - pOpt*u_ind_eq)
     
     #compton contribution
     m = np.diag(-a, -1) + np.diag(b, 0) + np.diag(-c, 1)
     I = np.identity(len(m))
     m = I*dtoinv - m + np.diag(pOpt+pech)
-    uC = np.matmul(m, ueq)
+    uC = np.matmul(m, u_ind_eq)
     
     toErg = 1e7
     
     ### Calculus of the intensities/luminosities  ###
-    I,L = computeLum(pech*ueq*toErg, nu)
+    I_ind,L_ind = computeLum(pech*u_ind_eq*toErg, nu)
+    I, L = computeLum(pech*ueq*toErg, nu)
     Is, Ls = computeLum(uS*toErg, nu)
     Ic, Lc = computeLum(uC*toErg, nu)
     L_Bnu = 4 * np.pi**2 * R**2  * Bnu * toErg
     
     # plot the luminosities*nu
-    """
-    plotAll(nu*L_Bnu, nu*Ls, nu*Lc, nu*L, tobs, e_pho, nu,
+    
+    plotAll(nu*L_Bnu, nu*Ls, nu*Lc, nu*L, nu*L_ind, tobs, e_pho, nu,
                   r'Spectre de la couronne (boule ; B = {:.0E} G, kT = {:} keV, R = {:.0E} cm, $\tau_p$ = {:.2E})'.format(Bcgs,kTe,Rcgs,pT),
                   r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',ymin,ymax,xmin,xmax)
     
@@ -213,7 +221,7 @@ def solveKompaneets(xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu):
     compareBELM(nu*L_Bnu,nu*Ls, nu*Lc, nu*L, tobs, e_pho, nu,
                  r'Spectre de la couronne (boule ; B = {:.0E} G, kT = {:} keV, R = {:.0E} cm, $\tau_p$ = {:.2E})'.format(Bcgs,kTe,Rcgs,pT),
                   r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',ymin,ymax,xmin,xmax)
-    
+    """
     
 def mainKompaneetsFromGui(r,b,kT,pt,xMin,xMax,yMin,yMax):
     
