@@ -125,7 +125,7 @@ def plotIntensity(iTh, uobs, tobs, e_photons, f_photons,
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 
 
-def plotAll(L_Bnu, nuLs, nuLc, nuLeq, tobs, e_pho, nu,
+def plotAll(L_Bnu, nuLs, nuLc, nuLeq, nuL_ind_eq, tobs, e_pho, nu,
                   titre, ylab,xlab,ymin,sup,xmin,xsup):
     """
     plot the sepctral radiance (intensité specifique) as a function of the energy
@@ -159,7 +159,8 @@ def plotAll(L_Bnu, nuLs, nuLc, nuLeq, tobs, e_pho, nu,
     # plot the intensity of the initial photon field
     #plt.plot(e_pho, nuL[0], color = 'purple',label='t=0s')
 
-    plt.plot(e_pho, nuLeq, color = 'green',label='Equilibrium spectrum')    
+    plt.plot(e_pho, nuL_ind_eq, color = 'green',label='Equilibrium spectrum')    
+    plt.plot(e_pho, nuLeq, color = 'skyblue',label='Eq spectrum (no induced compton)')    
         
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 
