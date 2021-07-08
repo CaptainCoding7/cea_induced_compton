@@ -7,12 +7,11 @@ Created on Thu Jun 17 14:17:42 2021
 
 import numpy as np
 from scipy.integrate import quad
-from scipy.integrate import odeint
 from scipy.special import gamma as Gammaf
 import matplotlib.pyplot as plt
 from scipy.special import kve
 
-from constants import k,h,Te,cl,sT,Ne,me,qe,mu0, kTe, B, R
+from constants import k,h,cl,sT,me,qe,mu0
 from plotter import setFigureParameters
 from plotter import plotIntensity
 import changcooper as cc
@@ -31,7 +30,7 @@ p = Pe/me/cl
 constants (like temperature or electron density) set in the constants.py file
 """
 
-def setParameters(B):
+def setParameters(B, Te):
     """
     initialization of general parameters
     """
@@ -66,7 +65,7 @@ def Ps(w,p):
     
     return j
 
-def j_nu_p(nui, Ub, nuL, p):
+def j_nu_p(nui, Ub, nuL, p, Ne):
     """
     calculation of j(nu,p) (for one specific frequency nui)
     """
@@ -86,15 +85,15 @@ def f_p(p, K2, theta):
     return 1 / (theta * K2) * p*p * np.exp(-p*p/theta/(gamma+1))
 
         
-def jManuol(xp, nui, Ub, nuL, K2, theta):
+def jManuol(xp, nui, Ub, nuL, K2, theta, Ne):
     """
     calculus of j(nu,p)*f(p,theta) (for one specific frequency nui)
     """
     
-    return j_nu_p(nui, Ub, nuL, xp) * f_p(xp, K2, theta)
+    return j_nu_p(nui, Ub, nuL, xp, Ne) * f_p(xp, K2, theta)
 
 
-def J_nu_theta(nu, M, B, p, nuL, Ub, theta, K2):
+def J_nu_theta(nu, M, B, p, nuL, Ub, theta, K2, Ne):
     """
     Calculus and plotting of the synchrotron emission J(nu,theta) for a Maxwell-Boltzmann distribution of electrons
     Depends on the temperature theta which defines the profile of the distribution
@@ -107,40 +106,22 @@ def J_nu_theta(nu, M, B, p, nuL, Ub, theta, K2):
     # as we can't take inf for the sup limit, we choose a mulitple of the characteristics border of the spectrum
     sup = 100*np.sqrt(theta *(1+theta))
     for i,nuu in enumerate(nu[:-1]):
-        J_theta[i], err = quad(jManuol,0, sup, args=(nuu, Ub, nuL, K2, theta))
+        J_theta[i], err = quad(jManuol,0, sup, args=(nuu, Ub, nuL, K2, theta, Ne))
         
-    #plt.plot(nu, J_theta)
-    
-    #setFigureParameters(r"Tracé de l'émissivité synchrotron $J_\nu(\nu,\theta)$ pour un gaz d'électrons chauffé à {:} keV".format(kTe),
-     #                   r'$J_\nu(\nu,\theta)$',r'$\nu$',5e5,5e8,1e2*nu[0],nu[-1])      
-    
     return J_theta
 
 
-def B_nu(nu, theta):
+def B_nu(nu, Te):
     """
     Planck's black body law
     """
     
-    #B_nu = ((2*h)/cl**2) * nu**3 *  (1 / (np.exp((h*nu)/(k*Te)) - 1 )) 
     a = h*nu/k/Te
-    """
-    Bnu = np.zeros(len(nu))
-    for i in range(len(nu)):
-        
-        if a[i] > 1e-8:
-            Bnu[i] = ((2*h)/cl**2) * nu[i]**3 *  (np.exp(-a[i]) / (1 - np.exp(-a[i])))
-        else:
-            Bnu[i] = ((2*h)/cl**2) * nu[i]**2 *  k * Te
-"""
     
-    #plt.plot(nu, B_nu)
-    # reshaping of the expression to avoid overflows
+    #B_nu = ((2*h)/cl**2) * nu**3 *  (1 / (np.exp(a) - 1 )) 
+    # reshaping of the B_nu expression to avoid overflows
     Bnu = ((2*h)/cl**2) * nu**3 *  (np.exp(-a) / (1 - np.exp(-a)))
 
-    #setFigureParameters(r"$B_\nu$".format(kTe)
-     #                   ,r'$B_\nu(\theta)$',r'$\nu$',5e3,5e10,nu[0],nu[-1])      
-    
     return Bnu
 
 

@@ -65,7 +65,9 @@ def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
         
        #we redefine B as it depends on u
        # depends on the equation; has to be redefine specifically for the equation
-        B = 0.5*(xa[1:]**4+xa[:-1]**4) * (0.5*(u[1:]+u[:-1])+1) 
+       # ind_compt allows to take the induced compton effect into account
+        ind_compt = (0.5*(u[1:]+u[:-1])+1) 
+        B = (0.5*(xa[1:]+xa[:-1]))**4 * ind_compt
         w = (B/C)*dxb
         lwl = np.abs(w)
         W = lwl * np.exp(-lwl)/(1.0-np.exp(-lwl))
@@ -82,15 +84,10 @@ def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
         # diagonale (taille M)
         b = np.zeros_like(xa)
         
-        if(np.all(T)==0):
-            b[0]    = 1/dT + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] )
-            b[1:-1] = 1/dT + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] )
-            b[-1]   = 1/dT + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 )
-        else:   
-            b[0]    = 1/dT + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] ) + 1/T[0]
-            b[1:-1] = 1/dT + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] ) + 1/T[1:-1]
-            b[-1]   = 1/dT + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 ) + 1/T[-1]
-        
+        b[0]    = 1/dT + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] ) + 1/T[0]
+        b[1:-1] = 1/dT + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] ) + 1/T[1:-1]
+        b[-1]   = 1/dT + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 ) + 1/T[-1]
+    
         r = Q + u/dT
                 
         # the current solution
@@ -104,11 +101,8 @@ def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
         for i in range(len(tobs)):
             ti = tobs[i]
             if(t == ti):
-                #print("t=",t)
-                #print("tobs=",ti)
                 uobs[i+1] = u
         
-        #print("---- u = ",u)
             
     return uobs, a, b, c, r
 
@@ -139,3 +133,48 @@ def changCooper2(xb, N, u, T, Q, dT):
         #print("---- u = ",u)
             
     return u
+
+def changCooperNoIter(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dTinv):
+    """
+    Solve the equation with the chang-cooper scheme
+    This version allows to get the equilibrium solution without performing
+    several iterations. dTinv=0 is equivalent to perform an infinite number
+    of iterations.
+    Can't be used with induced Compton effect.
+    """
+
+    # the vector containing the solution corresponding to the instants
+    # in tobs, the instants for which we want to plot the solution
+    uobs = np.empty([len(tobs)+1,M])
+    
+    # we add systematically the initial distribution in the solution vector
+    uobs[0] = u
+     
+    B = (0.5*(xa[1:]+xa[:-1]))**4
+    w = (B/C)*dxb
+    lwl = np.abs(w)
+    W = lwl * np.exp(-lwl)/(1.0-np.exp(-lwl))
+    Wp = W*np.exp(+w/2)
+    Wm = W*np.exp(-w/2)
+    
+    # sous-diagonale (taille M-1)
+    a = 1/A[1:]/dxa[1:] * C/dxb * Wm
+    
+    # sur-diagonale (taille M-1)
+    c = 1/A[:-1]/dxa[:-1] * C/dxb * Wp
+    
+    
+    # diagonale (taille M)
+    b = np.zeros_like(xa)
+    
+    b[0]    = dTinv + 1/A[   0]/dxa[   0] * (                         0 + C[0 ]/dxb[ 0]*Wm[ 0] ) + 1/T[0]
+    b[1:-1] = dTinv + 1/A[1:-1]/dxa[1:-1] * ( C[:-1]/dxb[:-1] * Wp[:-1] + C[1:]/dxb[1:]*Wm[1:] ) + 1/T[1:-1]
+    b[-1]   = dTinv + 1/A[  -1]/dxa[  -1] * ( C[ -1]/dxb[ -1] * Wp[ -1] +                    0 ) + 1/T[-1]
+    
+    r = Q + u*dTinv
+        
+    # the current solution
+    u = tridag(-a,b,-c,r)
+    uobs[1]=u
+       
+    return uobs, a, b, c, r

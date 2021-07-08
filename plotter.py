@@ -7,7 +7,13 @@ Created on Tue Jun  1 16:26:31 2021
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import numpy as np
-from constants import cl, h, k , Te
+from constants import cl, h, k
+
+# default limits
+xmin = 1e-7
+xmax = 1e3
+ymin = 1e20
+ymax = 1e35
 
 
 def setFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):

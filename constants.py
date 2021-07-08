@@ -5,7 +5,7 @@ Created on Thu Jun 17 14:35:07 2021
 @author: pa267340
 """
 
-import numpy as np
+from numpy import pi
     
 #################  CONSTANTS  #################
 
@@ -13,6 +13,7 @@ import numpy as np
 k = 1.381e-23
 # Planck constant
 h = 6.626e-34
+# Light velocity
 cl = 3e8
 # Thompson scattering cross section
 sT = 6.652e-29
@@ -20,8 +21,12 @@ sT = 6.652e-29
 me = 9.109e-31
 # Electron charge (in C)
 qe = 1.602e-19
-#permeabilité magnetique du vide
-mu0 = np.pi*4e-7
+# permeabilité magnetique du vide
+mu0 = pi*4e-7
+
+# Photon temperature (used to initialize the planckian photon distribution)
+kTp = 2
+Tp = kTp * 1.602e-16 / k
 
 
 #################  PARAMETERS  #################
@@ -42,9 +47,6 @@ Te = kTe * 1.602e-16 / k
 Bcgs=1e5
 B=Bcgs*1e-4
 
-# Photon temperature (used to initialize the planckian photon distribution)
-kTp = 2
-Tp = kTp * 1.602e-16 / k
 
 
 

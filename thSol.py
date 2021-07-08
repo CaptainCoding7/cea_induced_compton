@@ -10,7 +10,7 @@ from scipy.integrate import quad
 from scipy.optimize import fsolve
 from scipy.special import zeta
 
-from constants import k,h,Te,cl,sT,Ne,me,qe,mu0,kTe, Tp, kTp
+from constants import k,h,cl
 
     
 def BEDistrib(x,c):
@@ -20,7 +20,7 @@ def BEDistrib(x,c):
     return x**2 / (c*np.exp(x)-1)
     
 
-def F(c, Ndens0):
+def F(c, Ndens0, Te):
     """
     the equation used to find the constant
     """
@@ -38,7 +38,7 @@ def findCst(Ndens0):
 
 ####################################################
 
-def findNmax():
+def findNmax(Te):
     """
     the theoritical maximal density below which there is no BE condensate
     """
