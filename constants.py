@@ -9,10 +9,15 @@ from numpy import pi
     
 #################  CONSTANTS  #################
 
+#http://www.physics.rutgers.edu/~abrooks/342/constants.html
+
+
 # Boltzman constant
 k = 1.381e-23
+k_cgs = k * 1e7
 # Planck constant
 h = 6.626e-34
+h_cgs = h * 1e7
 # Light velocity
 cl = 3e8
 # Thompson scattering cross section
@@ -21,6 +26,7 @@ sT = 6.652e-29
 me = 9.109e-31
 # Electron charge (in C)
 qe = 1.602e-19
+qe_cgs = 4.803e-10
 # permeabilité magnetique du vide
 mu0 = pi*4e-7
 
@@ -31,7 +37,7 @@ Tp = kTp * 1.602e-16 / k
 
 #################  PARAMETERS  #################
 
-# Schwarzschild radius (Rs = 5e7 cm )
+# Corona radius (Rs = 5e7 cm )
 Rcgs = 5e7
 R = Rcgs * 1e-2
 # Thompson optical depth

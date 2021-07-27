@@ -3,32 +3,40 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
+from kivy.uix.checkbox import CheckBox
 from kivy.core.window import Window
 from kompaneets_cc2 import mainKompaneetsFromGui
+from numpy import empty
 
 class showGUI(GridLayout):
 
     def __init__(self, **kwargs):
         super(showGUI, self).__init__(**kwargs)
         self.cols = 4
-        self.lines = 5
+        self.lines = 6
         self.title = "test"
+        
+        modelFile = open("param_spect_BELM.txt")
+        #modelFile = open("param_spect_JED_bsc_99.txt")
+        mdlParam = modelFile.readlines()
+
         ######################### Text fields of the physical parameters
         # kT
         self.add_widget(Label(text='kT (keV)'))
-        self.kT = TextInput(text="80",multiline=False)
+        self.kT = TextInput(text=mdlParam[1].strip(),multiline=False)
         self.add_widget(self.kT)
         # B
         self.add_widget(Label(text='B (G)'))
-        self.B = TextInput(text="1e5",multiline=False)
+        self.B = TextInput(text=mdlParam[2].strip(),multiline=False)
         self.add_widget(self.B)
         #Thompson optical depth
-        self.add_widget(Label(text='Thompson Optical Depth'))
-        self.pT = TextInput(text="2.36",multiline=False)
+        self.add_widget(Label(text='Thomson Optical Depth'))
+        self.pT = TextInput(text=mdlParam[3].strip(),multiline=False)
         self.add_widget(self.pT)
-        # Schwarzschild radius
-        self.add_widget(Label(text='Schwarzschild radius (cm)'))
-        self.R = TextInput(text="5e7",multiline=False)
+        # Corona radius
+        self.add_widget(Label(text='Corona radius (cm)'))
+        #self.label.bind(size=self.label.setter('text_size')    
+        self.R = TextInput(text=mdlParam[4].strip(),multiline=False)
         self.add_widget(self.R)
         
         ###################### Graph parameters
@@ -45,8 +53,26 @@ class showGUI(GridLayout):
         self.add_widget(self.ymin)
                 
         self.add_widget(Label(text='ymax (erg/s)'))
-        self.ymax = TextInput(text="5e33",multiline=False)
+        self.ymax = TextInput(text="5e38",multiline=False)
         self.add_widget(self.ymax)
+        
+        self.add_widget(Label(text='Plot synchrotron/Brems contribution'))
+        self.checkbox1 = CheckBox(active=True)
+        self.plotSync = True
+        self.add_widget(self.checkbox1)
+        self.checkbox1.bind(active=self.on_checkbox1_active)
+
+        self.add_widget(Label(text='Plot Compton contribution'))
+        self.checkbox2 = CheckBox(active=True)
+        self.plotComp = True
+        self.add_widget(self.checkbox2)
+        self.checkbox2.bind(active=self.on_checkbox2_active)
+        
+        self.add_widget(Label(text='Plot without induced Compton'))
+        self.checkbox3 = CheckBox(active=True)
+        self.plotIC = True 
+        self.add_widget(self.checkbox3)
+        self.checkbox3.bind(active=self.on_checkbox3_active)
         
         
         self.btn = Button(text="PLOT")
@@ -57,13 +83,25 @@ class showGUI(GridLayout):
     def buttonClicked(self,btn):
         
         mainKompaneetsFromGui(float(self.R.text),float(self.B.text),float(self.kT.text),float(self.pT.text),
-                              float(self.xmin.text),float(self.xmax.text),float(self.ymin.text),float(self.ymax.text))
+                              float(self.xmin.text),float(self.xmax.text),float(self.ymin.text),float(self.ymax.text),
+                              self.plotIC,self.plotSync,self.plotComp)
+
+    
+    def on_checkbox1_active(self,checkbox, value):
+        self.plotSync = value
+    
+    def on_checkbox2_active(self,checkbox, value):
+        self.plotComp = value
+         
+    def on_checkbox3_active(self,checkbox, value):
+        self.plotIC = value   
         
+            
 class MyApp(App):
 
     def build(self):
         self.title = "Plotting parameters"
-        Window.size = (800, 150)
+        Window.size = (1000, 200)
         Window.bind(on_request_close=self.close_app)
         return showGUI()
 

@@ -34,7 +34,6 @@ def setFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
 def noLogsetFigureParameters(title, ylabel, xlabel, ymin, ymax,  xmin, xmax):
     
     # Reglages affichage
-    plt.yscale('log')
     leg = plt.legend(loc="upper right",prop={'size': 7}, bbox_to_anchor=[1, 1],
                      ncol=1, shadow=True, title="Legend", fancybox=True)
     leg.get_title().set_color("black")
@@ -125,42 +124,43 @@ def plotIntensity(iTh, uobs, tobs, e_photons, f_photons,
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 
 
-def plotAll(L_Bnu, nuLs, nuLc, nuLeq, nuL_ind_eq, tobs, e_pho, nu,
-                  titre, ylab,xlab,ymin,sup,xmin,xsup):
+def plotAll(L_Bnu, nuLs, nuLb, nuLc, nuLeq, nuL_ind_eq, tobs, 
+            e_pho, nu, titre, ylab,xlab,ymin,sup,xmin,xsup, 
+            plotIC,plotSync,plotComp):
     """
     plot the sepctral radiance (intensité specifique) as a function of the energy
     """
     col = [ cm.jet(x) for x in np.linspace(0, 0.3 , len(tobs))]
     
     # Synchrotron only
-      
-    nuLsNeg = np.empty_like(nuLs)
-    for i,u in enumerate(nuLs):
-        if u<0:
-            nuLsNeg[i]=-u
+    if plotSync:
+        nuLsNeg = np.empty_like(nuLs)
+        for i,u in enumerate(nuLs):
+            if u<0:
+                nuLsNeg[i]=-u
+    
+        plt.plot(e_pho, nuLs, color='red',label='Synchrotron contribution')
+        plt.plot(e_pho, nuLb, color='purple',label='Bremsstralhung contribution')
 
-    plt.plot(e_pho, nuLsNeg, '--', color='red',label='Negative synch')            
-    plt.plot(e_pho, nuLs, color='red',label='Synchrotron contribution')
+        plt.plot(e_pho, nuLsNeg, '--', color='red',label='Negative brem/synch')            
     
     # Compton only
+    if plotComp:
+        nuLcNeg = np.empty_like(nuLc)
+        for i,u in enumerate(nuLc):
+            if u<0:
+                nuLcNeg[i]=-u
     
-    nuLcNeg = np.empty_like(nuLc)
-    for i,u in enumerate(nuLc):
-        if u<0:
-            nuLcNeg[i]=-u
-
-    plt.plot(e_pho, nuLcNeg, '--', color='orange',label='Negative Compton')            
-    plt.plot(e_pho, nuLc, color='orange',label='Compton contribution')
-    
+        plt.plot(e_pho, nuLc, color='orange',label='Compton contribution')
+        plt.plot(e_pho, nuLcNeg, '--', color='orange',label='Negative Compton')            
+        
 
     # Blackbody emission
     plt.plot(e_pho,L_Bnu, color='black',label='Blackbody emission')
-    
-    # plot the intensity of the initial photon field
-    #plt.plot(e_pho, nuL[0], color = 'purple',label='t=0s')
 
-    plt.plot(e_pho, nuL_ind_eq, color = 'green',label='Equilibrium spectrum')    
-    plt.plot(e_pho, nuLeq, color = 'skyblue',label='Eq spectrum (no induced compton)')    
+    plt.plot(e_pho, nuL_ind_eq, color = 'green',label='Equilibrium spectrum')   
+    if plotIC:
+        plt.plot(e_pho, nuLeq, color = 'skyblue',label='Eq spectrum (no induced compton)')    
         
     setFigureParameters(titre, ylab,xlab,ymin,sup,xmin,xsup)
 

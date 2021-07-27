@@ -117,11 +117,25 @@ def B_nu(nu, Te):
     """
     
     a = h*nu/k/Te
+    """
+    Bnu = np.zeros(len(nu))
+    for i in range(len(nu)):
+        
+        if a[i] < 6.8e2:
+            Bnu[i] = ((2*h)/cl**2) * nu[i]**3 *  (np.exp(-a[i]) / (1 - np.exp(-a[i])))
+        else:
+            Bnu[i] = ((2*h)/cl**2) * nu[i]**2 *  k * Te / h
+    """
     
     #B_nu = ((2*h)/cl**2) * nu**3 *  (1 / (np.exp(a) - 1 )) 
     # reshaping of the B_nu expression to avoid overflows
     Bnu = ((2*h)/cl**2) * nu**3 *  (np.exp(-a) / (1 - np.exp(-a)))
-
+    for i in range(len(nu)):
+        if Bnu[i]<1e-200:
+            Bnu[i] = 1e-200
+        
+        
+        
     return Bnu
 
 

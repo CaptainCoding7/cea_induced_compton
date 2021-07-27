@@ -44,7 +44,7 @@ def tridag(a, b, c, r):
     return u
 
 
-def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
+def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT, withIC):
     """
     solve the equation with the chang-cooper scheme
     we store in uobs the solutions corresponding to the instants
@@ -66,14 +66,18 @@ def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
        #we redefine B as it depends on u
        # depends on the equation; has to be redefine specifically for the equation
        # ind_compt allows to take the induced compton effect into account
-        ind_compt = (0.5*(u[1:]+u[:-1])+1) 
+       # ignored if withIC is set to False
+        if withIC == True:
+            ind_compt = (0.5*(u[1:]+u[:-1])+1) 
+        else:
+            ind_compt = 1
         B = (0.5*(xa[1:]+xa[:-1]))**4 * ind_compt
         w = (B/C)*dxb
         lwl = np.abs(w)
         W = lwl * np.exp(-lwl)/(1.0-np.exp(-lwl))
         Wp = W*np.exp(+w/2)
         Wm = W*np.exp(-w/2)
-        
+
         # sous-diagonale (taille M-1)
         a = 1/A[1:]/dxa[1:] * C/dxb * Wm
     
@@ -93,7 +97,7 @@ def changCooper(A, C, T, Q, xa, dxa, dxb, u, M, tobs, dt, dT):
         # the current solution
         u = tridag(-a,b,-c,r)
         
-        # the instant corrsponding to the current solution
+        # the instant corresponding to the current solution
         t=n*dt
         
         # if this instant corresponds to one of those contained in tobs,
