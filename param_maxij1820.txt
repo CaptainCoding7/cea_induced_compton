@@ -1,0 +1,5 @@
+# Paramètres du modèle JED SSC 99 (kT, B, Thomson optical deep, Corona Radius)
+6.073e2
+3.606e6
+3.266e-1
+4.619e5

@@ -1,0 +1,5 @@
+# Paramètres du modèle BELM pour Cygnus X-1 (kT, B, Thomson optical deep, Corona Radius)
+72.3
+1.3e5
+2.36
+5e7
