@@ -49,14 +49,14 @@ def meshGeneration():
     # observation instants
     # the last instant is taken as the max time in the simulation   
     tobs = [1.e-3, 1.e-2, 5e-2,1e-1]
-    tobs = [1]
-    dt=1e-2
+    tobs = [1e2]
+    dt=1e-1
     dto =  to * dt
     #print("dt;dto: ",dt,dto)
     
     #### "energy" mesh  ################################
 
-    M=2000
+    M=1000
     
     # the energy carried by the photons (keV)
     emin = 1e-5
@@ -210,9 +210,10 @@ def solveKompaneets(xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu, plotIC,plotSync,plo
     dtoinv=1/dto
     #dtoinv=0
     # with the induced compton effect:
+    u, a, b, c, r = cc.changCooper(A, C, T, Q, xa, dxa, dxb, u0, M, tobs, dt, dto, False) #
+
     u_ind, a, b, c, r = cc.changCooper(A, C, T, Q, xa, dxa, dxb, u0, M, tobs, dt, dto, True) #
     # without the induced compton effect
-    u, a, b, c, r = cc.changCooper(A, C, T, Q, xa, dxa, dxb, u0, M, tobs, dt, dto, False) #
     u_ind_eq = u_ind[-1]
     ueq = u[-1]
     #------------------------------------------------------------------------#
@@ -231,9 +232,9 @@ def solveKompaneets(xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu, plotIC,plotSync,plo
     #compton contribution
     m = np.diag(-a, -1) + np.diag(b, 0) + np.diag(-c, 1)
     I = np.identity(len(m))
-    m = I*dtoinv - m + np.diag(pOpt+pech)
-    uC = np.matmul(m, u_ind_eq)
-    
+    mC = I*dtoinv - m + np.diag(pOpt+pech)
+    uC = np.matmul(mC, u_ind_eq)
+        
     toErg = 1e7
     
     ### Calculus of the intensities/luminosities  ###
@@ -244,6 +245,7 @@ def solveKompaneets(xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu, plotIC,plotSync,plo
     Is, Ls = computeLum(uS*toErg, nu)
     Ib, Lb = computeLum(uB*toErg, nu)
     Ic, Lc = computeLum(uC*toErg, nu)
+
     L_Bnu = 4 * np.pi**2 * R**2  * Bnu * toErg
     
  
@@ -256,25 +258,25 @@ def solveKompaneets(xa,xb,dxa,dxb,tobs,dt,dto, M, e_pho, nu, plotIC,plotSync,plo
     noLogsetFigureParameters("Rapport des spectres sans Compton induit / avec Compton induit", 
                              r'$\nu.L_\nu / \nu.Lind_\nu $','Energie (keV)', 0, 2, e_pho[0], e_pho[-1])
     
-    
+    """
     # plot the luminosities*nu    
     plotAll(nu*L_Bnu, nu*Ls, nu*Lb, nu*Lc, nu*L, nu*L_ind, tobs, e_pho, nu,
                   r'Spectre de la couronne (B = {:.2E} G, kT = {:.2E} keV, R = {:.2E} cm, $\tau_p$ = {:.2E})'.format(Bcgs,kTe,Rcgs,pT),
                   r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',ymin,ymax,xmin,xmax, plotIC,plotSync,plotComp)
     
     
-    """
+    
     # same plots with curves from BELM Model
     compareJED(nu*L_Bnu,nu*Ls, nu*Lb, nu*Lc, nu*L_ind, tobs, e_pho, nu,
                  r'Spectre de la couronne (B = {:.2E} G, kT = {:.2E} keV, R = {:.2E} cm, $\tau_p$ = {:.2E})'.format(Bcgs,kTe,Rcgs,pT),
                   r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',ymin,ymax,xmin,xmax)
     
-    
+    """
     compareBELMIC(nu*L_ind,nu*L, e_pho,
                  r'Spectre de la couronne (B = {:.2E} G, kT = {:.2E} keV, R = {:.2E} cm, $\tau_p$ = {:.2E})'.format(Bcgs,kTe,Rcgs,pT),
                   r'$\nu.L_\nu$ $(erg.s^{-1})$','Energy (keV)',
                   ymin,ymax,xmin,xmax)
-    """
+    
     
     mu = 0.5
     k_cgs = k * 1e7
