@@ -135,14 +135,18 @@ def plotAll(L_Bnu, nuLs, nuLb, nuLc, nuLeq, nuL_ind_eq, tobs,
     # Synchrotron only
     if plotSync:
         nuLsNeg = np.empty_like(nuLs)
+        nuLbNeg = np.empty_like(nuLb)
         for i,u in enumerate(nuLs):
             if u<0:
                 nuLsNeg[i]=-u
+        for i,u in enumerate(nuLb):
+            if u<0:
+                nuLbNeg[i]=-u                
     
         plt.plot(e_pho, nuLs, color='red',label='Synchrotron contribution')
+        plt.plot(e_pho, nuLsNeg, '--', color='red',label='Negative synch.')            
         plt.plot(e_pho, nuLb, color='purple',label='Bremsstralhung contribution')
-
-        plt.plot(e_pho, nuLsNeg, '--', color='red',label='Negative brem/synch')            
+        plt.plot(e_pho, nuLsNeg, '--', color='purple',label='Negative Brem.')            
     
     # Compton only
     if plotComp:
@@ -153,7 +157,7 @@ def plotAll(L_Bnu, nuLs, nuLb, nuLc, nuLeq, nuL_ind_eq, tobs,
     
         plt.plot(e_pho, nuLc, color='orange',label='Compton contribution')
         plt.plot(e_pho, nuLcNeg, '--', color='orange',label='Negative Compton')            
-        
+            
 
     # Blackbody emission
     plt.plot(e_pho,L_Bnu, color='black',label='Blackbody emission')

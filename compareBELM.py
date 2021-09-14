@@ -168,8 +168,13 @@ def compareBELMIC(nuLIC,nuLnoIC,e_pho, titre, ylab,xlab,ymin,ymax,xmin,xmax):
     firstline=41
     lastline=4136
     nblines=4096
-    fileIC = open("with_induced.txt")
-    fileNoIC = open("without_induced.txt")
+    fileIC = open("Spectres/SSC_cygX-1_with_induced.txt")
+    fileNoIC = open("Spectres/SSC_cygX-1_without_induced.txt")
+    """
+    fileIC = open("Spectres/BSC_GX339-4_avecinduit.txt")
+    fileNoIC = open("Spectres/BSC_GX339-4_sansinduit.txt")
+    """
+    
     lines_to_read = np.linspace(firstline,lastline,nblines)
     linesIC = np.empty((nblines,8))
     linesNoIC = np.empty((nblines,8))
@@ -213,7 +218,7 @@ def compareBELMIC(nuLIC,nuLnoIC,e_pho, titre, ylab,xlab,ymin,ymax,xmin,xmax):
     plt.xscale('log')
     plt.grid()
     noLogsetFigureParameters("Rapport des spectres sans Compton induit / avec Compton induit", 
-                             r'$\nu.L_\nu / \nu.Lind_\nu $','Energie (keV)', 0, 10, eB[0], eB[-1])
+                             r'$\nu.L_\nu / \nu.Lind_\nu $','Energie (keV)', 0, 2, eB[0], eB[-1])
       
     
     #plotBELM(nuLB,nuLs, np.zeros(nblines), nuLc, np.zeros(nblines), nuL, spectB_IC, spectBnoIC, tobs, e_pho, eB, 

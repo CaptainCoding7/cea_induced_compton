@@ -16,8 +16,8 @@ class showGUI(GridLayout):
         self.lines = 6
         self.title = "test"
         
-        modelFile = open("param_spect_BELM.txt")
-        #modelFile = open("param_spect_JED_bsc_99.txt")
+        modelFile = open("param_cygX-1.txt")
+        #modelFile = open("param_gx339-4.txt")
         mdlParam = modelFile.readlines()
 
         ######################### Text fields of the physical parameters
@@ -49,7 +49,7 @@ class showGUI(GridLayout):
         self.add_widget(self.xmax)
 
         self.add_widget(Label(text='ymin (erg/s)'))
-        self.ymin = TextInput(text="1e28",multiline=False)
+        self.ymin = TextInput(text="1e22",multiline=False)
         self.add_widget(self.ymin)
                 
         self.add_widget(Label(text='ymax (erg/s)'))
